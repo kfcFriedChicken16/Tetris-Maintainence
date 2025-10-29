@@ -1,0 +1,451 @@
+package com.comp2042;
+
+import javafx.animation.ScaleTransition;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.fxml.Initializable;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
+import javafx.scene.media.MediaView;
+import javafx.stage.Stage;
+import javafx.util.Duration;
+
+import java.io.File;
+import java.net.URL;
+import java.util.ResourceBundle;
+
+/**
+ * Controller for the main menu screen.
+ * Handles navigation between different game modes and menu options.
+ */
+public class MenuController implements Initializable {
+
+    @FXML private Button singlePlayerBtn;
+    @FXML private Button multiplayerBtn;
+    @FXML private Button settingsBtn;
+    @FXML private Button highScoresBtn;
+    @FXML private Button exitBtn;
+    @FXML private MediaView backgroundVideo;
+
+    private MediaPlayer backgroundVideoPlayer;
+    private MediaPlayer backgroundMusic;
+    private Stage primaryStage;
+
+    @Override
+    public void initialize(URL location, ResourceBundle resources) {
+        System.out.println("=== MenuController initializing ===");
+        
+        // Check if MediaView is properly injected
+        if (backgroundVideo != null) {
+            System.out.println("✓ MediaView found and ready");
+        } else {
+            System.out.println("✗ ERROR: MediaView is null - check FXML fx:id");
+        }
+        
+        // List all files in audio directory for debugging
+        listAudioFiles();
+        
+        // Initialize background video
+        System.out.println("--- Initializing Video ---");
+        initializeBackgroundVideo();
+        
+        // Initialize background music
+        System.out.println("--- Initializing Music ---");
+        initializeBackgroundMusic();
+        
+        // Add button animations
+        addButtonAnimations();
+        
+        System.out.println("=== MenuController initialization complete ===");
+    }
+    
+    /**
+     * Debug method to list all files in audio directory
+     */
+    private void listAudioFiles() {
+        try {
+            System.out.println("--- Checking audio directory ---");
+            
+            // Check if we can access the audio directory via resources
+            URL audioDir = getClass().getClassLoader().getResource("audio/");
+            if (audioDir != null) {
+                System.out.println("✓ Audio directory found in resources: " + audioDir);
+            } else {
+                System.out.println("✗ Audio directory not found in resources");
+            }
+            
+            // Check direct file path
+            File audioFolder = new File("src/main/resources/audio/");
+            if (audioFolder.exists() && audioFolder.isDirectory()) {
+                System.out.println("✓ Audio directory found at: " + audioFolder.getAbsolutePath());
+                File[] files = audioFolder.listFiles();
+                if (files != null && files.length > 0) {
+                    System.out.println("Files in audio directory:");
+                    for (File file : files) {
+                        System.out.println("  - " + file.getName() + " (" + file.length() + " bytes)");
+                    }
+                } else {
+                    System.out.println("✗ Audio directory is empty");
+                }
+            } else {
+                System.out.println("✗ Audio directory not found at: " + audioFolder.getAbsolutePath());
+            }
+        } catch (Exception e) {
+            System.out.println("Error checking audio directory: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Initialize background video for the menu.
+     * Uses the MP4 video file as background with 40% darker overlay.
+     */
+    private void initializeBackgroundVideo() {
+        try {
+            System.out.println("Looking for video file: menu_background.mp4");
+            
+            // Check if MediaView is available
+            if (backgroundVideo == null) {
+                System.out.println("✗ Cannot initialize video - MediaView is null");
+                return;
+            }
+            
+            Media videoMedia = null;
+            String foundPath = null;
+            
+            // Method 1: Try loading from resources (works when compiled)
+            URL videoURL = getClass().getClassLoader().getResource("audio/menu_background.mp4");
+            if (videoURL != null) {
+                try {
+                    videoMedia = new Media(videoURL.toString());
+                    foundPath = videoURL.toString();
+                    System.out.println("✓ Video found in resources: " + foundPath);
+                } catch (Exception e) {
+                    System.out.println("✗ Failed to load video from resources: " + e.getMessage());
+                }
+            }
+            
+            // Method 2: Try direct file path (works during development)
+            if (videoMedia == null) {
+                String videoPath = "src/main/resources/audio/menu_background.mp4";
+                File videoFile = new File(videoPath);
+                if (videoFile.exists()) {
+                    try {
+                        videoMedia = new Media(videoFile.toURI().toString());
+                        foundPath = videoFile.getAbsolutePath();
+                        System.out.println("✓ Video found at file path: " + foundPath);
+                    } catch (Exception e) {
+                        System.out.println("✗ Failed to load video from file: " + e.getMessage());
+                    }
+                } else {
+                    System.out.println("✗ Video file not found at: " + videoFile.getAbsolutePath());
+                }
+            }
+            
+            if (videoMedia == null) {
+                System.out.println("✗ No video file found - menu will use background color only");
+                return;
+            }
+            
+            // Create MediaPlayer
+            System.out.println("Creating MediaPlayer for video...");
+            backgroundVideoPlayer = new MediaPlayer(videoMedia);
+            
+            // Set up video properties
+            backgroundVideoPlayer.setCycleCount(MediaPlayer.INDEFINITE);
+            backgroundVideoPlayer.setMute(true);
+            backgroundVideoPlayer.setAutoPlay(false); // We'll start manually
+            
+            // Add event handlers
+            backgroundVideoPlayer.setOnError(() -> {
+                if (backgroundVideoPlayer.getError() != null) {
+                    System.out.println("✗ Video player error: " + backgroundVideoPlayer.getError().getMessage());
+                }
+            });
+            
+            backgroundVideoPlayer.setOnReady(() -> {
+                System.out.println("✓ Video player ready - starting playback");
+                backgroundVideoPlayer.play();
+            });
+            
+            backgroundVideoPlayer.setOnPlaying(() -> {
+                System.out.println("✓ Video is now playing");
+            });
+            
+            backgroundVideoPlayer.setOnEndOfMedia(() -> {
+                System.out.println("Video ended - restarting");
+                backgroundVideoPlayer.seek(Duration.ZERO);
+                backgroundVideoPlayer.play();
+            });
+            
+            // Bind to MediaView
+            backgroundVideo.setMediaPlayer(backgroundVideoPlayer);
+            System.out.println("✓ Video bound to MediaView");
+            
+        } catch (Exception e) {
+            System.out.println("✗ Video initialization failed: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Initialize background music for the menu.
+     * TODO: Replace the audio file path with your custom music file
+     */
+    private void initializeBackgroundMusic() {
+        try {
+            System.out.println("Looking for background music files...");
+            
+            // Try multiple audio file formats
+            String[] musicFiles = {
+                "audio/menu_background.mp3",
+                "audio/menu_music.mp3", 
+                "audio/background_music.mp3",
+                "audio/menu_background.wav",
+                "audio/menu_background.m4a"
+            };
+            
+            Media musicMedia = null;
+            String foundFile = null;
+            
+            // Try loading from resources first (recommended)
+            for (String fileName : musicFiles) {
+                System.out.println("Trying to load: " + fileName);
+                URL musicURL = getClass().getClassLoader().getResource(fileName);
+                if (musicURL != null) {
+                    try {
+                        musicMedia = new Media(musicURL.toString());
+                        foundFile = fileName;
+                        System.out.println("✓ Background music found: " + fileName);
+                        break;
+                    } catch (Exception e) {
+                        System.out.println("✗ Failed to load " + fileName + ": " + e.getMessage());
+                    }
+                }
+            }
+            
+            // If not found in resources, try direct file paths
+            if (musicMedia == null) {
+                System.out.println("Trying direct file paths...");
+                for (String fileName : musicFiles) {
+                    String fullPath = "src/main/resources/" + fileName;
+                    File musicFile = new File(fullPath);
+                    System.out.println("Checking: " + musicFile.getAbsolutePath());
+                    if (musicFile.exists()) {
+                        try {
+                            musicMedia = new Media(musicFile.toURI().toString());
+                            foundFile = fullPath;
+                            System.out.println("✓ Background music found at: " + fullPath);
+                            break;
+                        } catch (Exception e) {
+                            System.out.println("✗ Failed to load " + fullPath + ": " + e.getMessage());
+                        }
+                    }
+                }
+            }
+            
+            if (musicMedia != null) {
+                System.out.println("Creating MediaPlayer for music...");
+                backgroundMusic = new MediaPlayer(musicMedia);
+                
+                // Set up music properties for seamless looping
+                backgroundMusic.setCycleCount(MediaPlayer.INDEFINITE);
+                backgroundMusic.setVolume(0.3);
+                backgroundMusic.setAutoPlay(false); // Start manually
+                
+                // Add event handlers
+                backgroundMusic.setOnError(() -> {
+                    if (backgroundMusic.getError() != null) {
+                        System.out.println("✗ Music player error: " + backgroundMusic.getError().getMessage());
+                    }
+                });
+                
+                backgroundMusic.setOnReady(() -> {
+                    System.out.println("✓ Background music ready - starting playback");
+                    backgroundMusic.play();
+                });
+                
+                backgroundMusic.setOnPlaying(() -> {
+                    System.out.println("✓ Background music is now playing");
+                });
+                
+                backgroundMusic.setOnEndOfMedia(() -> {
+                    System.out.println("Music ended - restarting");
+                    backgroundMusic.seek(Duration.ZERO);
+                    backgroundMusic.play();
+                });
+                
+                System.out.println("✓ Background music setup completed for: " + foundFile);
+            } else {
+                System.out.println("✗ No background music file found. Tried:");
+                for (String fileName : musicFiles) {
+                    System.out.println("  - " + fileName);
+                }
+                System.out.println("Place your music file in src/main/resources/audio/ with one of the above names");
+            }
+            
+        } catch (Exception e) {
+            System.out.println("✗ Music initialization failed: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Add hover animations to menu buttons
+     */
+    private void addButtonAnimations() {
+        addButtonHoverEffect(singlePlayerBtn);
+        addButtonHoverEffect(multiplayerBtn);
+        addButtonHoverEffect(settingsBtn);
+        addButtonHoverEffect(highScoresBtn);
+        addButtonHoverEffect(exitBtn);
+    }
+
+    /**
+     * Add hover effect to a button
+     */
+    private void addButtonHoverEffect(Button button) {
+        button.setOnMouseEntered(e -> {
+            ScaleTransition scaleIn = new ScaleTransition(Duration.millis(100), button);
+            scaleIn.setToX(1.05);
+            scaleIn.setToY(1.05);
+            scaleIn.play();
+        });
+
+        button.setOnMouseExited(e -> {
+            ScaleTransition scaleOut = new ScaleTransition(Duration.millis(100), button);
+            scaleOut.setToX(1.0);
+            scaleOut.setToY(1.0);
+            scaleOut.play();
+        });
+    }
+
+    /**
+     * Handle Single Player button click - Navigate to the current Tetris game
+     */
+    @FXML
+    private void startSinglePlayer(ActionEvent event) {
+        try {
+            // Stop background video and music
+            if (backgroundVideoPlayer != null) {
+                backgroundVideoPlayer.stop();
+            }
+            if (backgroundMusic != null) {
+                backgroundMusic.stop();
+            }
+
+            // Load the existing game layout
+            URL location = getClass().getClassLoader().getResource("gameLayout.fxml");
+            FXMLLoader fxmlLoader = new FXMLLoader(location);
+            Parent gameRoot = fxmlLoader.load();
+            
+            // Get the GuiController and start the game
+            GuiController guiController = fxmlLoader.getController();
+            
+            // Get current stage and switch scene
+            Stage stage = (Stage) singlePlayerBtn.getScene().getWindow();
+            Scene gameScene = new Scene(gameRoot, 300, 510);
+            stage.setScene(gameScene);
+            stage.setTitle("Tetris - Single Player");
+            
+            // Initialize the game controller
+            new GameController(guiController);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            showErrorAlert("Error starting single player game: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Handle Multiplayer button click - TODO: Implement multiplayer mode
+     */
+    @FXML
+    private void startMultiplayer(ActionEvent event) {
+        // TODO: Implement multiplayer functionality
+        showInfoAlert("Multiplayer Mode", "Local multiplayer mode coming soon!\n\nThis will feature:\n- Split-screen gameplay\n- Competitive scoring\n- Attack mechanics");
+    }
+
+    /**
+     * Handle Settings button click - TODO: Implement settings menu
+     */
+    @FXML
+    private void openSettings(ActionEvent event) {
+        // TODO: Implement settings menu
+        showInfoAlert("Settings", "Settings menu coming soon!\n\nWill include:\n- Audio controls\n- Key bindings\n- Graphics options\n- Difficulty settings");
+    }
+
+    /**
+     * Handle High Scores button click - TODO: Implement high scores
+     */
+    @FXML
+    private void showHighScores(ActionEvent event) {
+        // TODO: Implement high scores functionality
+        showInfoAlert("High Scores", "High scores leaderboard coming soon!\n\nWill feature:\n- Local high scores\n- Score statistics\n- Achievement tracking");
+    }
+
+    /**
+     * Handle Exit button click - Close the application
+     */
+    @FXML
+    private void exitGame(ActionEvent event) {
+        // Stop background video and music
+        if (backgroundVideoPlayer != null) {
+            backgroundVideoPlayer.stop();
+        }
+        if (backgroundMusic != null) {
+            backgroundMusic.stop();
+        }
+        
+        // Close the application
+        Stage stage = (Stage) exitBtn.getScene().getWindow();
+        stage.close();
+    }
+
+    /**
+     * Set the primary stage reference for scene switching
+     */
+    public void setPrimaryStage(Stage primaryStage) {
+        this.primaryStage = primaryStage;
+    }
+
+    /**
+     * Show an information alert dialog
+     */
+    private void showInfoAlert(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    /**
+     * Show an error alert dialog
+     */
+    private void showErrorAlert(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Error");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    /**
+     * Clean up resources when the menu is closed
+     */
+    public void cleanup() {
+        if (backgroundVideoPlayer != null) {
+            backgroundVideoPlayer.stop();
+            backgroundVideoPlayer.dispose();
+        }
+        if (backgroundMusic != null) {
+            backgroundMusic.stop();
+            backgroundMusic.dispose();
+        }
+    }
+}

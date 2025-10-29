@@ -20,6 +20,12 @@
             <GameOverPanel fx:id="gameOverPanel"/>
         </VBox>
     </Group>
+    
+    <!-- Back to Menu Button -->
+    <Button fx:id="backToMenuBtn" text="Back to Menu" onAction="#backToMenu" 
+            layoutX="10" layoutY="10" styleClass="back-menu-button">
+    </Button>
+    
     <stylesheets>
         <URL value="@window_style.css"/>
     </stylesheets>

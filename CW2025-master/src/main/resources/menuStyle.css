@@ -1,0 +1,93 @@
+/* Main Menu Styles */
+
+.menu-background {
+    /* Video background - handled by MediaView in MenuController */
+    -fx-background-color: #000000; /* Fallback black background if video fails */
+}
+
+.background-overlay {
+    -fx-background-color: rgba(0, 0, 0, 0.4); /* 40% darker overlay as requested */
+    -fx-pref-width: 100%;
+    -fx-pref-height: 100%;
+}
+
+/* Title Styling */
+.game-title {
+    -fx-text-fill: linear-gradient(to bottom, #FFD700, #FFA500);
+    -fx-font-weight: bold;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.8), 10, 0.5, 2, 2);
+}
+
+.game-subtitle {
+    -fx-text-fill: #FFFFFF;
+    -fx-opacity: 0.9;
+}
+
+/* Menu Button Styling */
+.menu-button {
+    -fx-background-color: linear-gradient(to bottom, #4A90E2, #357ABD);
+    -fx-text-fill: white;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-color: #2E5A87;
+    -fx-border-width: 2;
+    -fx-pref-width: 200;
+    -fx-pref-height: 45;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 5, 0.3, 0, 2);
+}
+
+.menu-button:hover {
+    -fx-background-color: linear-gradient(to bottom, #5BA0F2, #4A90E2);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 8, 0.4, 0, 3);
+}
+
+.menu-button:pressed {
+    -fx-background-color: linear-gradient(to bottom, #357ABD, #2E5A87);
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
+
+/* Exit Button Special Styling */
+.menu-button-exit {
+    -fx-background-color: linear-gradient(to bottom, #E74C3C, #C0392B);
+    -fx-text-fill: white;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-color: #A93226;
+    -fx-border-width: 2;
+    -fx-pref-width: 200;
+    -fx-pref-height: 45;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 5, 0.3, 0, 2);
+}
+
+.menu-button-exit:hover {
+    -fx-background-color: linear-gradient(to bottom, #EC7063, #E74C3C);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.menu-button-exit:pressed {
+    -fx-background-color: linear-gradient(to bottom, #C0392B, #A93226);
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
+
+/* Version Info */
+.version-info {
+    -fx-text-fill: #CCCCCC;
+    -fx-opacity: 0.7;
+}
+
+/* Animation Classes */
+.fade-in {
+    -fx-opacity: 0;
+}
+
+.slide-in {
+    -fx-translate-y: 50;
+    -fx-opacity: 0;
+}

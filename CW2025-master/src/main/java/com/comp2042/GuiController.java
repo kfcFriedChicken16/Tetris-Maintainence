@@ -8,8 +8,12 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Group;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.effect.Reflection;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -18,6 +22,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
+import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.net.URL;
@@ -38,6 +43,9 @@ public class GuiController implements Initializable {
 
     @FXML
     private GameOverPanel gameOverPanel;
+
+    @FXML
+    private Button backToMenuBtn;
 
     private Rectangle[][] displayMatrix;
 
@@ -221,5 +229,39 @@ public class GuiController implements Initializable {
 
     public void pauseGame(ActionEvent actionEvent) {
         gamePanel.requestFocus();
+    }
+
+    /**
+     * Handle Back to Menu button click - Return to the main menu
+     */
+    @FXML
+    public void backToMenu(ActionEvent actionEvent) {
+        try {
+            // Stop the game timeline
+            if (timeLine != null) {
+                timeLine.stop();
+            }
+
+            // Load the main menu
+            URL location = getClass().getClassLoader().getResource("mainMenu.fxml");
+            FXMLLoader fxmlLoader = new FXMLLoader(location);
+            Parent menuRoot = fxmlLoader.load();
+            
+            // Get the menu controller
+            MenuController menuController = fxmlLoader.getController();
+            
+            // Get current stage and switch back to menu
+            Stage stage = (Stage) backToMenuBtn.getScene().getWindow();
+            Scene menuScene = new Scene(menuRoot, 800, 600);
+            stage.setScene(menuScene);
+            stage.setTitle("Tetris - Enhanced Edition");
+            
+            // Set the primary stage reference for the menu controller
+            menuController.setPrimaryStage(stage);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("Error returning to menu: " + e.getMessage());
+        }
     }
 }
