@@ -4,16 +4,29 @@
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.Group?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.media.MediaView?>
 <?import javafx.scene.text.Text?>
 <?import java.net.URL?>
-<Pane fx:controller="com.comp2042.GuiController"
+<StackPane fx:controller="com.comp2042.GuiController"
       xmlns:fx="http://javafx.com/fxml">
-    <GridPane fx:id="brickPanel" vgap="1" hgap="1"/>
-    <BorderPane styleClass="gameBoard" fx:id="gameBoard">
-        <center>
-            <GridPane fx:id="gamePanel" hgap="1" vgap="1" layoutY="30" layoutX="40"/>
-        </center>
-    </BorderPane>
+    
+    <!-- Background Video (Bottom Layer) -->
+    <MediaView fx:id="gameplayBackgroundVideo" preserveRatio="false" 
+               StackPane.alignment="CENTER"/>
+    
+    <!-- Dark Overlay (Middle Layer - to darken the video with vignette effect) -->
+    <Region fx:id="gameplayVideoOverlay" styleClass="gameplay-video-overlay" 
+            StackPane.alignment="CENTER"/>
+    
+    <!-- Game Content (Top Layer) -->
+    <Pane>
+        <GridPane fx:id="brickPanel" vgap="1" hgap="1"/>
+        <GridPane fx:id="ghostPanel" vgap="1" hgap="1"/>
+        <BorderPane styleClass="gameBoard" fx:id="gameBoard">
+            <center>
+                <GridPane fx:id="gamePanel" hgap="1" vgap="1" layoutY="30" layoutX="40"/>
+            </center>
+        </BorderPane>
 
     <Group fx:id="groupNotification" layoutX="14" layoutY="203">
         <VBox alignment="CENTER">
@@ -26,7 +39,21 @@
             layoutX="10" layoutY="10" styleClass="back-menu-button">
     </Button>
     
+    <!-- Score Display -->
+    <VBox layoutX="220" layoutY="10" spacing="5">
+        <Label text="SCORE" styleClass="score-label"/>
+        <Label fx:id="scoreLabel" text="0" styleClass="scoreClass"/>
+    </VBox>
+    
+    <!-- NEXT Panel (Right Side) -->
+    <VBox fx:id="nextPanelVBox" layoutX="620" layoutY="60" spacing="10" alignment="TOP_CENTER">
+        <Label text="NEXT" styleClass="panel-label"/>
+        <VBox fx:id="nextPiecesContainer" spacing="15" alignment="TOP_CENTER"/>
+    </VBox>
+    
+    </Pane>
+    
     <stylesheets>
         <URL value="@window_style.css"/>
     </stylesheets>
-</Pane>
+</StackPane>

@@ -5,6 +5,8 @@ import com.comp2042.logic.bricks.BrickGenerator;
 import com.comp2042.logic.bricks.RandomBrickGenerator;
 
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class SimpleBoard implements Board {
 
@@ -72,20 +74,56 @@ public class SimpleBoard implements Board {
     public boolean rotateLeftBrick() {
         int[][] currentMatrix = MatrixOperations.copy(currentGameMatrix);
         NextShapeInfo nextShape = brickRotator.getNextShape();
-        boolean conflict = MatrixOperations.intersect(currentMatrix, nextShape.getShape(), (int) currentOffset.getX(), (int) currentOffset.getY());
-        if (conflict) {
-            return false;
-        } else {
+        
+        // Try rotation at current position first
+        if (!MatrixOperations.intersect(currentMatrix, nextShape.getShape(), (int) currentOffset.getX(), (int) currentOffset.getY())) {
             brickRotator.setCurrentShape(nextShape.getPosition());
             return true;
         }
+        
+        // Wall-kick system: Try different positions if rotation fails
+        Point[] kickTests = {
+            new Point(-1, 0),  // Try left
+            new Point(1, 0),   // Try right
+            new Point(-2, 0),  // Try further left
+            new Point(2, 0),   // Try further right
+            new Point(0, -1),  // Try up
+            new Point(-1, -1), // Try left-up
+            new Point(1, -1),  // Try right-up
+        };
+        
+        for (Point kick : kickTests) {
+            int testX = (int) currentOffset.getX() + kick.x;
+            int testY = (int) currentOffset.getY() + kick.y;
+            
+            if (!MatrixOperations.intersect(currentMatrix, nextShape.getShape(), testX, testY)) {
+                // Rotation successful with wall-kick
+                currentOffset = new Point(testX, testY);
+                brickRotator.setCurrentShape(nextShape.getPosition());
+                return true;
+            }
+        }
+        
+        // All wall-kick attempts failed
+        return false;
+    }
+
+    @Override
+    public int hardDropBrick() {
+        int dropDistance = 0;
+        // Keep moving down until we can't move anymore
+        while (moveBrickDown()) {
+            dropDistance++;
+        }
+        return dropDistance; // Return how far we dropped for bonus points
     }
 
     @Override
     public boolean createNewBrick() {
         Brick currentBrick = brickGenerator.getBrick();
         brickRotator.setBrick(currentBrick);
-        currentOffset = new Point(4, 10);
+        // Fix: Start at top center (X=4 for center of 10-wide board, Y=0 for top)
+        currentOffset = new Point(4, 0);
         return MatrixOperations.intersect(currentGameMatrix, brickRotator.getCurrentShape(), (int) currentOffset.getX(), (int) currentOffset.getY());
     }
 
@@ -96,7 +134,48 @@ public class SimpleBoard implements Board {
 
     @Override
     public ViewData getViewData() {
-        return new ViewData(brickRotator.getCurrentShape(), (int) currentOffset.getX(), (int) currentOffset.getY(), brickGenerator.getNextBrick().getShapeMatrix().get(0));
+        Point ghostPos = getGhostPiecePosition();
+        
+        // Get next 4 bricks for preview
+        List<int[][]> nextBricksList = new ArrayList<>();
+        RandomBrickGenerator randomGen = (RandomBrickGenerator) brickGenerator;
+        for (int i = 0; i < 4; i++) {
+            Brick next = randomGen.peekNextBrick(i);
+            if (next != null) {
+                nextBricksList.add(next.getShapeMatrix().get(0));
+            }
+        }
+        
+        return new ViewData(brickRotator.getCurrentShape(), (int) currentOffset.getX(), (int) currentOffset.getY(), 
+                           brickGenerator.getNextBrick().getShapeMatrix().get(0), nextBricksList, ghostPos);
+    }
+
+    /**
+     * Calculate where the current piece would land if hard dropped
+     * @return Point representing the ghost piece position (clamped to visible board bounds)
+     */
+    public Point getGhostPiecePosition() {
+        Point ghostPosition = new Point(currentOffset);
+        int[][] currentMatrix = MatrixOperations.copy(currentGameMatrix);
+        int[][] pieceShape = brickRotator.getCurrentShape();
+        
+        // Keep moving down until we hit something
+        while (true) {
+            Point testPosition = new Point(ghostPosition);
+            testPosition.translate(0, 1);
+            
+            if (MatrixOperations.intersect(currentMatrix, pieceShape, 
+                    (int) testPosition.getX(), (int) testPosition.getY())) {
+                break; // Can't move further down
+            }
+            
+            ghostPosition = testPosition;
+        }
+        
+        // Return the true landing position without clamping
+        // The rendering will handle clipping to visible area if needed
+        // This ensures ghost always shows where piece will actually land
+        return ghostPosition;
     }
 
     @Override

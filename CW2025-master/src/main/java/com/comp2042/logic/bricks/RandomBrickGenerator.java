@@ -37,4 +37,20 @@ public class RandomBrickGenerator implements BrickGenerator {
     public Brick getNextBrick() {
         return nextBricks.peek();
     }
+
+    /**
+     * Peek at a future brick in the queue without consuming it
+     * @param index 0 = next, 1 = after next, etc.
+     * @return The brick at that position, or null if not enough bricks
+     */
+    public Brick peekNextBrick(int index) {
+        // Ensure we have enough bricks
+        while (nextBricks.size() < index + 1) {
+            nextBricks.add(brickList.get(ThreadLocalRandom.current().nextInt(brickList.size())));
+        }
+        
+        // Convert to array to peek at specific index
+        Brick[] array = nextBricks.toArray(new Brick[0]);
+        return index < array.length ? array[index] : null;
+    }
 }

@@ -28,8 +28,9 @@ public class MainMenu extends MenuBase implements MenuInterface {
     // Constants for configuration (Encapsulation)
     private static final String MENU_FXML = "mainMenu.fxml";
     private static final String WINDOW_TITLE = "Tetris - Enhanced Edition";
-    private static final int WINDOW_WIDTH = 800;
-    private static final int WINDOW_HEIGHT = 600;
+    private static final int WINDOW_WIDTH = 1200;  // Larger default size
+    private static final int WINDOW_HEIGHT = 800;  // Larger default size
+    private static final boolean FULL_SCREEN = true; // Enable full screen mode
     
     /**
      * Constructor - Encapsulation principle
@@ -110,7 +111,14 @@ public class MainMenu extends MenuBase implements MenuInterface {
      */
     private void configureStage() {
         primaryStage.setTitle(WINDOW_TITLE);
-        primaryStage.setResizable(false);
+        primaryStage.setResizable(true); // Allow resizing for full screen
+        
+        // Enable full screen mode
+        if (FULL_SCREEN) {
+            primaryStage.setFullScreen(true);
+            primaryStage.setFullScreenExitHint("Press ESC to exit full screen");
+            primaryStage.setMaximized(true);
+        }
     }
     
     /**

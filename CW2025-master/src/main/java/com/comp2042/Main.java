@@ -38,9 +38,16 @@ public class Main extends Application {
         Parent root = fxmlLoader.load();
         GuiController c = fxmlLoader.getController();
 
-        primaryStage.setTitle("TetrisJFX");
-        Scene scene = new Scene(root, 300, 510);
+        primaryStage.setTitle("TetrisJFX - Full Screen");
+        Scene scene = new Scene(root, 1200, 800); // Larger default size
         primaryStage.setScene(scene);
+        
+        // Enable full screen mode
+        primaryStage.setResizable(true);
+        primaryStage.setFullScreen(true);
+        primaryStage.setFullScreenExitHint("Press ESC to exit full screen");
+        primaryStage.setMaximized(true);
+        
         primaryStage.show();
         new GameController(c);
     }

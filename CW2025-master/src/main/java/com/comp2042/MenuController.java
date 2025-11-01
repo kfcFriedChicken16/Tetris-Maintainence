@@ -1,6 +1,10 @@
 package com.comp2042;
 
+import javafx.animation.Animation;
+import javafx.animation.FadeTransition;
+import javafx.animation.ParallelTransition;
 import javafx.animation.ScaleTransition;
+import javafx.animation.TranslateTransition;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -30,6 +34,9 @@ public class MenuController implements Initializable {
     @FXML private Button settingsBtn;
     @FXML private Button highScoresBtn;
     @FXML private Button exitBtn;
+    @FXML private javafx.scene.control.Label instructionLabel;
+    @FXML private javafx.scene.layout.VBox menuButtonsContainer;
+    @FXML private javafx.scene.control.Label versionLabel;
     @FXML private MediaView backgroundVideo;
 
     private MediaPlayer backgroundVideoPlayer;
@@ -58,10 +65,132 @@ public class MenuController implements Initializable {
         System.out.println("--- Initializing Music ---");
         initializeBackgroundMusic();
         
-        // Add button animations
+        // Setup initial menu state - show title and instruction, hide menu buttons
+        setupInitialMenuState();
+        
+        // Setup click and keyboard handlers
+        setupInteractionHandlers();
+        
+        // Setup blinking animation for instruction text
+        setupInstructionBlink();
+        
+        // Add button animations (for when menu appears)
         addButtonAnimations();
         
         System.out.println("=== MenuController initialization complete ===");
+    }
+    
+    /**
+     * Setup initial menu state - show title and instruction, hide menu options
+     */
+    private void setupInitialMenuState() {
+        if (instructionLabel != null) {
+            instructionLabel.setVisible(true);
+            instructionLabel.setManaged(true);
+        }
+        if (menuButtonsContainer != null) {
+            menuButtonsContainer.setVisible(false);
+            menuButtonsContainer.setManaged(false);
+        }
+        if (versionLabel != null) {
+            versionLabel.setVisible(false);
+            versionLabel.setManaged(false);
+        }
+    }
+    
+    /**
+     * Setup click and keyboard handlers for starting menu
+     */
+    private void setupInteractionHandlers() {
+        // Use Platform.runLater to ensure scene is ready
+        javafx.application.Platform.runLater(() -> {
+            // Get the root StackPane from instructionLabel's scene
+            if (instructionLabel != null && instructionLabel.getScene() != null) {
+                javafx.scene.Node root = instructionLabel.getScene().getRoot();
+                if (root instanceof javafx.scene.layout.StackPane) {
+                    javafx.scene.layout.StackPane stackPane = (javafx.scene.layout.StackPane) root;
+                    
+                    // Mouse click handler
+                    stackPane.setOnMouseClicked(e -> {
+                        if (menuButtonsContainer != null && !menuButtonsContainer.isVisible()) {
+                            revealMenu();
+                        }
+                    });
+                    
+                    // Keyboard handler (Space key)
+                    stackPane.setOnKeyPressed(e -> {
+                        if (e.getCode() == javafx.scene.input.KeyCode.SPACE && 
+                            menuButtonsContainer != null && !menuButtonsContainer.isVisible()) {
+                            revealMenu();
+                            e.consume();
+                        }
+                    });
+                    
+                    // Make it focusable for keyboard input
+                    stackPane.setFocusTraversable(true);
+                    stackPane.requestFocus();
+                }
+            }
+        });
+    }
+    
+    /**
+     * Setup blinking animation for instruction text
+     */
+    private void setupInstructionBlink() {
+        if (instructionLabel == null) return;
+        
+        FadeTransition blinkAnimation = new FadeTransition(Duration.millis(1000), instructionLabel);
+        blinkAnimation.setFromValue(1.0);
+        blinkAnimation.setToValue(0.3);
+        blinkAnimation.setCycleCount(Animation.INDEFINITE);
+        blinkAnimation.setAutoReverse(true);
+        blinkAnimation.play();
+    }
+    
+    /**
+     * Reveal menu options - called on click or space key
+     */
+    private void revealMenu() {
+        // Hide instruction text with fade out
+        if (instructionLabel != null) {
+            FadeTransition fadeOut = new FadeTransition(Duration.millis(300), instructionLabel);
+            fadeOut.setToValue(0);
+            fadeOut.setOnFinished(e -> {
+                instructionLabel.setVisible(false);
+                instructionLabel.setManaged(false);
+            });
+            fadeOut.play();
+        }
+        
+        // Show menu buttons with fade in and slide up
+        if (menuButtonsContainer != null) {
+            menuButtonsContainer.setManaged(true);
+            menuButtonsContainer.setVisible(true);
+            menuButtonsContainer.setOpacity(0);
+            menuButtonsContainer.setTranslateY(30);
+            
+            FadeTransition fadeIn = new FadeTransition(Duration.millis(400), menuButtonsContainer);
+            fadeIn.setToValue(1.0);
+            
+            TranslateTransition slideUp = new TranslateTransition(Duration.millis(400), menuButtonsContainer);
+            slideUp.setToY(0);
+            slideUp.setInterpolator(javafx.animation.Interpolator.EASE_OUT);
+            
+            ParallelTransition reveal = new ParallelTransition(fadeIn, slideUp);
+            reveal.play();
+        }
+        
+        // Show version info
+        if (versionLabel != null) {
+            versionLabel.setManaged(true);
+            versionLabel.setVisible(true);
+            versionLabel.setOpacity(0);
+            FadeTransition versionFade = new FadeTransition(Duration.millis(400), versionLabel);
+            versionFade.setDelay(Duration.millis(200));
+            versionFade.setToValue(1.0);
+            versionFade.play();
+        }
     }
     
     /**
@@ -184,11 +313,51 @@ public class MenuController implements Initializable {
             
             // Bind to MediaView
             backgroundVideo.setMediaPlayer(backgroundVideoPlayer);
-            System.out.println("✓ Video bound to MediaView");
+            
+            // Setup video sizing after scene is available
+            // If scene is already available, set it up now
+            if (backgroundVideo.getScene() != null) {
+                setupVideoFullScreen();
+            } else {
+                // Otherwise, wait for scene to be set (called from MainMenu)
+                backgroundVideo.sceneProperty().addListener((obs, oldScene, newScene) -> {
+                    if (newScene != null) {
+                        setupVideoFullScreen();
+                    }
+                });
+            }
+            
+            System.out.println("✓ Video bound to MediaView and configured for full screen");
             
         } catch (Exception e) {
             System.out.println("✗ Video initialization failed: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * Setup video to fill entire screen (cover mode - may crop edges to avoid black bars)
+     */
+    private void setupVideoFullScreen() {
+        if (backgroundVideo != null) {
+            // Get the scene to bind video size properly
+            if (backgroundVideo.getScene() != null) {
+                // Bind to scene size to fill entire screen
+                // With preserveRatio="false", video will stretch to cover entire screen
+                backgroundVideo.fitWidthProperty().bind(backgroundVideo.getScene().widthProperty());
+                backgroundVideo.fitHeightProperty().bind(backgroundVideo.getScene().heightProperty());
+                System.out.println("✓ Video size bound to scene dimensions - full screen coverage");
+            } else if (primaryStage != null) {
+                // Fallback to stage size
+                backgroundVideo.fitWidthProperty().bind(primaryStage.widthProperty());
+                backgroundVideo.fitHeightProperty().bind(primaryStage.heightProperty());
+                System.out.println("✓ Video size bound to stage dimensions - full screen coverage");
+            } else {
+                // Final fallback - set large enough to cover typical screens
+                backgroundVideo.setFitWidth(1920);
+                backgroundVideo.setFitHeight(1080);
+                System.out.println("✓ Video set to large size for full screen coverage (fallback)");
+            }
         }
     }
 
@@ -306,20 +475,33 @@ public class MenuController implements Initializable {
     }
 
     /**
-     * Add hover effect to a button
+     * Add enhanced hover effect to a button with smooth transitions
      */
     private void addButtonHoverEffect(Button button) {
+        // Create smooth translate animation for lift effect
+        TranslateTransition translateUp = new TranslateTransition(Duration.millis(250), button);
+        translateUp.setToY(-2);
+        translateUp.setInterpolator(javafx.animation.Interpolator.EASE_OUT);
+        
+        TranslateTransition translateDown = new TranslateTransition(Duration.millis(250), button);
+        translateDown.setToY(0);
+        translateDown.setInterpolator(javafx.animation.Interpolator.EASE_OUT);
+        
         button.setOnMouseEntered(e -> {
-            ScaleTransition scaleIn = new ScaleTransition(Duration.millis(100), button);
-            scaleIn.setToX(1.05);
-            scaleIn.setToY(1.05);
+            translateUp.play();
+            ScaleTransition scaleIn = new ScaleTransition(Duration.millis(200), button);
+            scaleIn.setToX(1.02);
+            scaleIn.setToY(1.02);
+            scaleIn.setInterpolator(javafx.animation.Interpolator.EASE_OUT);
             scaleIn.play();
         });
 
         button.setOnMouseExited(e -> {
-            ScaleTransition scaleOut = new ScaleTransition(Duration.millis(100), button);
+            translateDown.play();
+            ScaleTransition scaleOut = new ScaleTransition(Duration.millis(200), button);
             scaleOut.setToX(1.0);
             scaleOut.setToY(1.0);
+            scaleOut.setInterpolator(javafx.animation.Interpolator.EASE_OUT);
             scaleOut.play();
         });
     }
@@ -348,9 +530,13 @@ public class MenuController implements Initializable {
             
             // Get current stage and switch scene
             Stage stage = (Stage) singlePlayerBtn.getScene().getWindow();
-            Scene gameScene = new Scene(gameRoot, 300, 510);
+            Scene gameScene = new Scene(gameRoot, 1200, 800); // Larger size for full screen
             stage.setScene(gameScene);
             stage.setTitle("Tetris - Single Player");
+            
+            // Maintain full screen mode
+            stage.setFullScreen(true);
+            stage.setFullScreenExitHint("Press ESC to exit full screen");
             
             // Initialize the game controller
             new GameController(guiController);

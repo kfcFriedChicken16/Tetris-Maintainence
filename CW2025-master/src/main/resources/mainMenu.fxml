@@ -13,8 +13,9 @@
 
 <StackPane fx:controller="com.comp2042.MenuController" xmlns:fx="http://javafx.com/fxml" styleClass="menu-background">
     
-    <!-- Video Background -->
-    <MediaView fx:id="backgroundVideo" fitWidth="800" fitHeight="600" preserveRatio="false"/>
+    <!-- Video Background (Full Screen) -->
+    <MediaView fx:id="backgroundVideo" preserveRatio="false" 
+               StackPane.alignment="CENTER"/>
     
     <!-- Dark Overlay (40% darker as requested) -->
     <Region styleClass="background-overlay"/>
@@ -25,22 +26,19 @@
         <!-- Title -->
         <Label text="TETRIS" styleClass="game-title">
             <font>
-                <Font name="Arial Bold" size="72"/>
+                <Font name="Arial Bold" size="96"/>
             </font>
-            <effect>
-                <DropShadow color="#000000" offsetX="3" offsetY="3" radius="5"/>
-            </effect>
         </Label>
         
-        <!-- Subtitle -->
-        <Label text="Classic Block Puzzle Game" styleClass="game-subtitle">
+        <!-- Instruction Text -->
+        <Label fx:id="instructionLabel" text="Click on the screen or press Space to start" styleClass="instruction-text">
             <font>
-                <Font name="Arial" size="18"/>
+                <Font name="Arial" size="16"/>
             </font>
         </Label>
         
-        <!-- Menu Buttons -->
-        <VBox alignment="CENTER" spacing="15" maxWidth="250">
+        <!-- Menu Buttons (Initially Hidden) -->
+        <VBox fx:id="menuButtonsContainer" alignment="CENTER" spacing="20" maxWidth="300" visible="false" managed="false">
             
             <Button fx:id="singlePlayerBtn" text="Single Player" onAction="#startSinglePlayer" styleClass="menu-button">
                 <font>
@@ -87,7 +85,7 @@
         </VBox>
         
         <!-- Version Info -->
-        <Label text="Version 2.0 - Enhanced Edition" styleClass="version-info">
+        <Label fx:id="versionLabel" text="Version 2.0 - Enhanced Edition" styleClass="version-info" visible="false" managed="false">
             <font>
                 <Font name="Arial" size="12"/>
             </font>

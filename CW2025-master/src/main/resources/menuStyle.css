@@ -11,11 +11,15 @@
     -fx-pref-height: 100%;
 }
 
-/* Title Styling */
+/* Title Styling - Enhanced "WOW" Effect */
 .game-title {
-    -fx-text-fill: linear-gradient(to bottom, #FFD700, #FFA500);
+    -fx-text-fill: linear-gradient(to bottom, #FFD700, #FFA500, #FF8C00);
     -fx-font-weight: bold;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.8), 10, 0.5, 2, 2);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.9), 15, 0.6, 0, 0),
+                dropshadow(gaussian, rgba(255, 215, 0, 0.8), 20, 0.8, 0, 0),
+                dropshadow(gaussian, rgba(255, 140, 0, 0.6), 25, 1.0, 0, 0);
+    -fx-font-size: 96px;
+    -fx-letter-spacing: 4px;
 }
 
 .game-subtitle {
@@ -23,55 +27,137 @@
     -fx-opacity: 0.9;
 }
 
-/* Menu Button Styling */
+/* Instruction Text Styling */
+.instruction-text {
+    -fx-text-fill: white;
+    -fx-opacity: 0.9;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.6), 5, 0.4, 0, 1);
+}
+
+/* Menu Button Styling - Enhanced Design */
 .menu-button {
     -fx-background-color: linear-gradient(to bottom, #4A90E2, #357ABD);
     -fx-text-fill: white;
-    -fx-background-radius: 10;
-    -fx-border-radius: 10;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
     -fx-border-color: #2E5A87;
     -fx-border-width: 2;
-    -fx-pref-width: 200;
-    -fx-pref-height: 45;
+    -fx-pref-width: 280;
+    -fx-pref-height: 55;
+    -fx-min-width: 280;
+    -fx-min-height: 55;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 5, 0.3, 0, 2);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 8, 0.4, 0, 3);
+    -fx-font-family: "Segoe UI", "Roboto", "Arial";
+    -fx-font-weight: bold;
+    -fx-font-size: 17px;
+    -fx-letter-spacing: 0.5px;
+    -fx-padding: 12 24;
+    /* Smooth transitions */
+    -fx-transition: all 0.25s ease-out;
 }
 
 .menu-button:hover {
     -fx-background-color: linear-gradient(to bottom, #5BA0F2, #4A90E2);
-    -fx-scale-x: 1.05;
-    -fx-scale-y: 1.05;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 8, 0.4, 0, 3);
+    -fx-border-color: #3A7BC8;
+    -fx-effect: dropshadow(gaussian, rgba(74, 144, 226, 0.5), 12, 0.5, 0, 4),
+                dropshadow(gaussian, rgba(0, 0, 0, 0.4), 10, 0.4, 0, 3);
+    -fx-translate-y: -2;
 }
 
 .menu-button:pressed {
     -fx-background-color: linear-gradient(to bottom, #357ABD, #2E5A87);
-    -fx-scale-x: 0.98;
-    -fx-scale-y: 0.98;
+    -fx-border-color: #1F4A6E;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 6, 0.3, 0, 2);
+    -fx-translate-y: 0;
+    -fx-scale-x: 0.97;
+    -fx-scale-y: 0.97;
 }
 
-/* Exit Button Special Styling */
+.menu-button:focused {
+    -fx-border-color: #5BA0F2;
+    -fx-border-width: 3;
+}
+
+/* Exit Button Special Styling - Enhanced */
 .menu-button-exit {
     -fx-background-color: linear-gradient(to bottom, #E74C3C, #C0392B);
     -fx-text-fill: white;
-    -fx-background-radius: 10;
-    -fx-border-radius: 10;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
     -fx-border-color: #A93226;
     -fx-border-width: 2;
-    -fx-pref-width: 200;
-    -fx-pref-height: 45;
+    -fx-pref-width: 280;
+    -fx-pref-height: 55;
+    -fx-min-width: 280;
+    -fx-min-height: 55;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 5, 0.3, 0, 2);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 8, 0.4, 0, 3);
+    -fx-font-family: "Segoe UI", "Roboto", "Arial";
+    -fx-font-weight: bold;
+    -fx-font-size: 17px;
+    -fx-letter-spacing: 0.5px;
+    -fx-padding: 12 24;
+    -fx-transition: all 0.25s ease-out;
 }
 
 .menu-button-exit:hover {
     -fx-background-color: linear-gradient(to bottom, #EC7063, #E74C3C);
-    -fx-scale-x: 1.05;
-    -fx-scale-y: 1.05;
+    -fx-border-color: #C94A3D;
+    -fx-effect: dropshadow(gaussian, rgba(231, 76, 60, 0.5), 12, 0.5, 0, 4),
+                dropshadow(gaussian, rgba(0, 0, 0, 0.4), 10, 0.4, 0, 3);
+    -fx-translate-y: -2;
 }
 
 .menu-button-exit:pressed {
     -fx-background-color: linear-gradient(to bottom, #C0392B, #A93226);
+    -fx-border-color: #8B2417;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 6, 0.3, 0, 2);
+    -fx-translate-y: 0;
+    -fx-scale-x: 0.97;
+    -fx-scale-y: 0.97;
+}
+
+.menu-button-exit:focused {
+    -fx-border-color: #EC7063;
+    -fx-border-width: 3;
+}
+
+/* PLAY Button Styling - Blinking Effect */
+.play-button {
+    -fx-background-color: white;
+    -fx-text-fill: #1a1a1a;
+    -fx-background-radius: 15;
+    -fx-border-radius: 15;
+    -fx-border-color: #CCCCCC;
+    -fx-border-width: 3;
+    -fx-pref-width: 200;
+    -fx-pref-height: 70;
+    -fx-min-width: 200;
+    -fx-min-height: 70;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(255, 255, 255, 0.8), 15, 0.8, 0, 0),
+                dropshadow(gaussian, rgba(0, 0, 0, 0.3), 10, 0.4, 0, 3);
+    -fx-font-family: "Segoe UI", "Roboto", "Arial";
+    -fx-font-weight: bold;
+    -fx-font-size: 28px;
+    -fx-letter-spacing: 2px;
+    -fx-padding: 15 40;
+}
+
+.play-button:hover {
+    -fx-background-color: #F5F5F5;
+    -fx-border-color: #FFFFFF;
+    -fx-effect: dropshadow(gaussian, rgba(255, 255, 255, 1.0), 20, 1.0, 0, 0),
+                dropshadow(gaussian, rgba(0, 0, 0, 0.4), 12, 0.5, 0, 4);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.play-button:pressed {
+    -fx-background-color: #E0E0E0;
+    -fx-border-color: #CCCCCC;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 8, 0.3, 0, 2);
     -fx-scale-x: 0.98;
     -fx-scale-y: 0.98;
 }
