@@ -37,7 +37,16 @@ public class MenuController implements Initializable {
     @FXML private javafx.scene.control.Label instructionLabel;
     @FXML private javafx.scene.layout.VBox menuButtonsContainer;
     @FXML private javafx.scene.control.Label versionLabel;
+    @FXML private javafx.scene.control.Label titleLabel;
     @FXML private MediaView backgroundVideo;
+    
+    // Mode selection buttons
+    @FXML private javafx.scene.layout.VBox modeButtonsContainer;
+    @FXML private Button classicBtn;
+    @FXML private Button sprintBtn;
+    @FXML private Button ultraBtn;
+    @FXML private Button survivalBtn;
+    @FXML private Button backToMenuBtn;
 
     private MediaPlayer backgroundVideoPlayer;
     private MediaPlayer backgroundMusic;
@@ -91,6 +100,10 @@ public class MenuController implements Initializable {
         if (menuButtonsContainer != null) {
             menuButtonsContainer.setVisible(false);
             menuButtonsContainer.setManaged(false);
+        }
+        if (modeButtonsContainer != null) {
+            modeButtonsContainer.setVisible(false);
+            modeButtonsContainer.setManaged(false);
         }
         if (versionLabel != null) {
             versionLabel.setVisible(false);
@@ -472,6 +485,13 @@ public class MenuController implements Initializable {
         addButtonHoverEffect(settingsBtn);
         addButtonHoverEffect(highScoresBtn);
         addButtonHoverEffect(exitBtn);
+        
+        // Add animations to mode buttons
+        if (classicBtn != null) addButtonHoverEffect(classicBtn);
+        if (sprintBtn != null) addButtonHoverEffect(sprintBtn);
+        if (ultraBtn != null) addButtonHoverEffect(ultraBtn);
+        if (survivalBtn != null) addButtonHoverEffect(survivalBtn);
+        if (backToMenuBtn != null) addButtonHoverEffect(backToMenuBtn);
     }
 
     /**
@@ -507,11 +527,165 @@ public class MenuController implements Initializable {
     }
 
     /**
-     * Handle Single Player button click - Navigate to the current Tetris game
+     * Handle Single Player button click - Show mode selection on same screen
      */
     @FXML
-    private void startSinglePlayer(ActionEvent event) {
+    private void showModeSelection(ActionEvent event) {
+        // Fade out "TETRIS" title and replace with "SELECT MODE"
+        if (titleLabel != null) {
+            FadeTransition fadeOutTitle = new FadeTransition(Duration.millis(300), titleLabel);
+            fadeOutTitle.setToValue(0);
+            fadeOutTitle.setOnFinished(e -> {
+                titleLabel.setText("SELECT MODE");
+                // Apply mode-title style (smaller font, same golden effect)
+                titleLabel.getStyleClass().clear();
+                titleLabel.getStyleClass().add("mode-title");
+                FadeTransition fadeInTitle = new FadeTransition(Duration.millis(300), titleLabel);
+                fadeInTitle.setToValue(1.0);
+                fadeInTitle.play();
+            });
+            fadeOutTitle.play();
+        }
+        
+        // Hide main menu buttons with fade out
+        if (menuButtonsContainer != null && menuButtonsContainer.isVisible()) {
+            FadeTransition fadeOut = new FadeTransition(Duration.millis(300), menuButtonsContainer);
+            fadeOut.setToValue(0);
+            fadeOut.setOnFinished(e -> {
+                menuButtonsContainer.setVisible(false);
+                menuButtonsContainer.setManaged(false);
+                
+                // Show mode selection buttons with fade in and slide up
+                showModeButtons();
+            });
+            fadeOut.play();
+        } else {
+            // If menu buttons are already hidden, just show mode buttons
+            showModeButtons();
+        }
+        
+        // Hide version label
+        if (versionLabel != null && versionLabel.isVisible()) {
+            FadeTransition fadeOut = new FadeTransition(Duration.millis(300), versionLabel);
+            fadeOut.setToValue(0);
+            fadeOut.setOnFinished(e -> {
+                versionLabel.setVisible(false);
+                versionLabel.setManaged(false);
+            });
+            fadeOut.play();
+        }
+    }
+    
+    /**
+     * Show mode selection buttons with smooth animation
+     */
+    private void showModeButtons() {
+        // Ensure main menu buttons are completely hidden first
+        if (menuButtonsContainer != null) {
+            menuButtonsContainer.setVisible(false);
+            menuButtonsContainer.setManaged(false);
+        }
+        if (versionLabel != null) {
+            versionLabel.setVisible(false);
+            versionLabel.setManaged(false);
+        }
+        
+        // Now show mode buttons
+        if (modeButtonsContainer != null) {
+            modeButtonsContainer.setManaged(true);
+            modeButtonsContainer.setVisible(true);
+            modeButtonsContainer.setOpacity(0);
+            modeButtonsContainer.setTranslateY(30);
+            
+            FadeTransition fadeIn = new FadeTransition(Duration.millis(400), modeButtonsContainer);
+            fadeIn.setToValue(1.0);
+            
+            TranslateTransition slideUp = new TranslateTransition(Duration.millis(400), modeButtonsContainer);
+            slideUp.setToY(0);
+            slideUp.setInterpolator(javafx.animation.Interpolator.EASE_OUT);
+            
+            ParallelTransition parallel = new ParallelTransition(fadeIn, slideUp);
+            parallel.play();
+        }
+    }
+    
+    /**
+     * Go back to main menu from mode selection
+     */
+    @FXML
+    private void backToMainMenu(ActionEvent event) {
+        // Fade out "SELECT MODE" title and replace with "TETRIS"
+        if (titleLabel != null) {
+            FadeTransition fadeOutTitle = new FadeTransition(Duration.millis(300), titleLabel);
+            fadeOutTitle.setToValue(0);
+            fadeOutTitle.setOnFinished(e -> {
+                titleLabel.setText("TETRIS");
+                // Restore original game-title style
+                titleLabel.getStyleClass().clear();
+                titleLabel.getStyleClass().add("game-title");
+                FadeTransition fadeInTitle = new FadeTransition(Duration.millis(300), titleLabel);
+                fadeInTitle.setToValue(1.0);
+                fadeInTitle.play();
+            });
+            fadeOutTitle.play();
+        }
+        
+        // Hide mode selection buttons with fade out
+        if (modeButtonsContainer != null && modeButtonsContainer.isVisible()) {
+            FadeTransition fadeOut = new FadeTransition(Duration.millis(300), modeButtonsContainer);
+            fadeOut.setToValue(0);
+            fadeOut.setOnFinished(e -> {
+                modeButtonsContainer.setVisible(false);
+                modeButtonsContainer.setManaged(false);
+                
+                // Show main menu buttons with fade in and slide up
+                if (menuButtonsContainer != null) {
+                    menuButtonsContainer.setManaged(true);
+                    menuButtonsContainer.setVisible(true);
+                    menuButtonsContainer.setOpacity(0);
+                    menuButtonsContainer.setTranslateY(30);
+                    
+                    FadeTransition fadeIn = new FadeTransition(Duration.millis(400), menuButtonsContainer);
+                    fadeIn.setToValue(1.0);
+                    
+                    TranslateTransition slideUp = new TranslateTransition(Duration.millis(400), menuButtonsContainer);
+                    slideUp.setToY(0);
+                    slideUp.setInterpolator(javafx.animation.Interpolator.EASE_OUT);
+                    
+                    ParallelTransition parallel = new ParallelTransition(fadeIn, slideUp);
+                    parallel.play();
+                }
+                
+                // Show version label
+                if (versionLabel != null) {
+                    versionLabel.setManaged(true);
+                    versionLabel.setVisible(true);
+                    versionLabel.setOpacity(0);
+                    FadeTransition fadeInLabel = new FadeTransition(Duration.millis(400), versionLabel);
+                    fadeInLabel.setToValue(1.0);
+                    fadeInLabel.play();
+                }
+            });
+            fadeOut.play();
+        }
+    }
+    
+    /**
+     * Navigate to game with selected mode
+     */
+    private void startGame(GameMode mode) {
         try {
+            // Immediately hide mode selection buttons to prevent visual glitches
+            if (modeButtonsContainer != null) {
+                modeButtonsContainer.setVisible(false);
+                modeButtonsContainer.setManaged(false);
+            }
+            
+            // Also hide title if it's "SELECT MODE"
+            if (titleLabel != null && "SELECT MODE".equals(titleLabel.getText())) {
+                titleLabel.setVisible(false);
+            }
+            
             // Stop background video and music
             if (backgroundVideoPlayer != null) {
                 backgroundVideoPlayer.stop();
@@ -520,7 +694,7 @@ public class MenuController implements Initializable {
                 backgroundMusic.stop();
             }
 
-            // Load the existing game layout
+            // Load the game layout
             URL location = getClass().getClassLoader().getResource("gameLayout.fxml");
             FXMLLoader fxmlLoader = new FXMLLoader(location);
             Parent gameRoot = fxmlLoader.load();
@@ -529,22 +703,42 @@ public class MenuController implements Initializable {
             GuiController guiController = fxmlLoader.getController();
             
             // Get current stage and switch scene
-            Stage stage = (Stage) singlePlayerBtn.getScene().getWindow();
-            Scene gameScene = new Scene(gameRoot, 1200, 800); // Larger size for full screen
+            Stage stage = (Stage) classicBtn.getScene().getWindow();
+            Scene gameScene = new Scene(gameRoot, 1200, 800);
             stage.setScene(gameScene);
-            stage.setTitle("Tetris - Single Player");
+            stage.setTitle("Tetris - " + mode.getDisplayName());
             
             // Maintain full screen mode
             stage.setFullScreen(true);
             stage.setFullScreenExitHint("Press ESC to exit full screen");
             
-            // Initialize the game controller
-            new GameController(guiController);
+            // Initialize the game controller with selected mode
+            new GameController(guiController, mode);
             
         } catch (Exception e) {
             e.printStackTrace();
-            showErrorAlert("Error starting single player game: " + e.getMessage());
+            System.out.println("Error starting game: " + e.getMessage());
         }
+    }
+    
+    @FXML
+    private void selectClassic(ActionEvent event) {
+        startGame(GameMode.CLASSIC);
+    }
+    
+    @FXML
+    private void selectSprint(ActionEvent event) {
+        startGame(GameMode.SPRINT);
+    }
+    
+    @FXML
+    private void selectUltra(ActionEvent event) {
+        startGame(GameMode.ULTRA);
+    }
+    
+    @FXML
+    private void selectSurvival(ActionEvent event) {
+        startGame(GameMode.SURVIVAL);
     }
 
     /**

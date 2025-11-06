@@ -32,7 +32,11 @@ import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.PrintWriter;
 import java.net.URL;
 import java.util.ResourceBundle;
 
@@ -63,6 +67,39 @@ public class GuiController implements Initializable {
 
     @FXML
     private javafx.scene.control.Label scoreLabel;
+    
+    @FXML
+    private javafx.scene.control.Label highestScoreLabel;
+    
+    // Sprint mode UI elements
+    @FXML
+    private javafx.scene.layout.VBox sprintModeDisplay;
+    @FXML
+    private javafx.scene.control.Label sprintLinesLabel;
+    @FXML
+    private javafx.scene.control.Label sprintTimerLabel;
+    @FXML
+    private javafx.scene.control.Label sprintBestTimeLabel;
+    
+    // Ultra mode UI elements
+    @FXML
+    private javafx.scene.layout.VBox ultraModeDisplay;
+    @FXML
+    private javafx.scene.control.Label ultraTimerLabel;
+    @FXML
+    private javafx.scene.control.Label ultraSpeedLevelLabel;
+    @FXML
+    private javafx.scene.control.Label ultraBestScoreLabel;
+    
+    // Survival mode UI elements
+    @FXML
+    private javafx.scene.layout.VBox survivalModeDisplay;
+    @FXML
+    private javafx.scene.control.Label survivalSpeedLevelLabel;
+    @FXML
+    private javafx.scene.control.Label survivalNextThresholdLabel;
+    @FXML
+    private javafx.scene.control.Label survivalHighestLevelLabel;
 
     @FXML
     private javafx.scene.layout.VBox nextPiecesContainer;
@@ -96,14 +133,48 @@ public class GuiController implements Initializable {
     private Rectangle[][] ghostRectangles;
 
     private Timeline timeLine;
+    
+    // Sprint mode timer
+    private Timeline sprintTimer;
+    private long sprintStartTime = 0;
+    private static long sprintBestTime = Long.MAX_VALUE; // Best time in milliseconds
+    private static final String SPRINT_BEST_TIME_FILE = "sprint_best_time.txt";
+    
+    // Ultra mode variables
+    private Timeline ultraTimer;
+    private long ultraStartTime = 0;
+    private int ultraSpeedLevel = 1; // Current speed level (starts at 1)
+    private long currentSpeedInterval = 400; // Current speed in milliseconds (starts at 400ms)
+    private static int ultraBestScore = 0; // Best score achieved in Ultra mode
+    private static final String ULTRA_BEST_SCORE_FILE = "ultra_best_score.txt";
+    private static final long ULTRA_TIME_LIMIT = 120000; // 2 minutes in milliseconds
+    private static final long ULTRA_SPEED_INCREASE_INTERVAL = 20000; // 20 seconds in milliseconds
+    
+    // Survival mode variables
+    private int survivalSpeedLevel = 1; // Current speed level (starts at 1)
+    private long survivalSpeedInterval = 400; // Current speed in milliseconds (starts at 400ms)
+    private int survivalNextThreshold = 1500; // Next score threshold for speed increase
+    private static int survivalHighestLevel = 1; // Highest level reached in Survival mode
+    private static final String SURVIVAL_HIGHEST_LEVEL_FILE = "survival_highest_level.txt";
+    private static final int SURVIVAL_SPEED_INCREASE_THRESHOLD = 1500; // Points needed for each speed increase
 
     private final BooleanProperty isPause = new SimpleBooleanProperty();
 
     private final BooleanProperty isGameOver = new SimpleBooleanProperty();
+    
+    // Highest score (persists across games)
+    private static int highestScore = 0;
+    private static final String HIGHEST_SCORE_FILE = "highest_score.txt";
+    
+    // Current game mode
+    private GameMode currentGameMode = GameMode.CLASSIC;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         Font.loadFont(getClass().getClassLoader().getResource("digital.ttf").toExternalForm(), 38);
+        
+        // Load highest score from file on startup
+        loadHighestScore();
         
         // Initialize background video
         initializeGameplayBackgroundVideo();
@@ -122,6 +193,22 @@ public class GuiController implements Initializable {
         gamePanel.setOnKeyPressed(new EventHandler<KeyEvent>() {
             @Override
             public void handle(KeyEvent keyEvent) {
+                // Game over controls - check FIRST before normal game controls
+                if (isGameOver.getValue() == Boolean.TRUE) {
+                    if (keyEvent.getCode() == KeyCode.SPACE) {
+                        // Press Space to restart game
+                        newGame(null);
+                        keyEvent.consume();
+                        return;
+                    } else if (keyEvent.getCode() == KeyCode.ESCAPE) {
+                        // Press ESC to return to main menu
+                        backToMenu(null);
+                        keyEvent.consume();
+                        return;
+                    }
+                }
+                
+                // Normal game controls (only when not paused and not game over)
                 if (isPause.getValue() == Boolean.FALSE && isGameOver.getValue() == Boolean.FALSE) {
                     if (keyEvent.getCode() == KeyCode.LEFT || keyEvent.getCode() == KeyCode.A) {
                         refreshBrick(eventListener.onLeftEvent(new MoveEvent(EventType.LEFT, EventSource.USER)));
@@ -139,28 +226,19 @@ public class GuiController implements Initializable {
                         moveDown(new MoveEvent(EventType.DOWN, EventSource.USER));
                         keyEvent.consume();
                     }
-                        if (keyEvent.getCode() == KeyCode.SPACE) {
-                            hardDrop(new MoveEvent(EventType.HARD_DROP, EventSource.USER));
-                            keyEvent.consume();
-                        }
-                    }
-                    // Game over controls
-                    if (isGameOver.getValue() == Boolean.TRUE) {
-                        if (keyEvent.getCode() == KeyCode.SPACE) {
-                            // Press Space to restart game
-                            newGame(null);
-                            keyEvent.consume();
-                        } else if (keyEvent.getCode() == KeyCode.ESCAPE) {
-                            // Press ESC to return to main menu
-                            backToMenu(null);
-                            keyEvent.consume();
-                        }
-                    }
-                    if (keyEvent.getCode() == KeyCode.N) {
-                        newGame(null);
+                    if (keyEvent.getCode() == KeyCode.SPACE) {
+                        hardDrop(new MoveEvent(EventType.HARD_DROP, EventSource.USER));
+                        keyEvent.consume();
                     }
                 }
-            });
+                
+                // N key always restarts (for quick restart during gameplay)
+                if (keyEvent.getCode() == KeyCode.N && isGameOver.getValue() == Boolean.FALSE) {
+                    newGame(null);
+                    keyEvent.consume();
+                }
+            }
+        });
         gameOverPanel.setVisible(false);
 
         final Reflection reflection = new Reflection();
@@ -177,8 +255,9 @@ public class GuiController implements Initializable {
         if (!(parent instanceof Pane)) return;
         Pane root = (Pane) parent;
 
-        // Move the 4 nodes as a single unit
-        Group gameCluster = new Group(gameBoard, brickPanel, ghostPanel, groupNotification);
+        // Move the 3 nodes as a single unit (gameBoard, brickPanel, ghostPanel)
+        // groupNotification is handled separately to center on entire screen
+        Group gameCluster = new Group(gameBoard, brickPanel, ghostPanel);
         gameCluster.setManaged(false);
         brickPanel.setManaged(false);
         ghostPanel.setManaged(false);
@@ -186,6 +265,7 @@ public class GuiController implements Initializable {
 
         root.getChildren().removeAll(gameBoard, brickPanel, ghostPanel, groupNotification);
         root.getChildren().add(gameCluster);
+        root.getChildren().add(groupNotification); // Add game over panel separately
 
         Platform.runLater(() -> {
             // 1) Freeze board size so it never changes with content
@@ -208,6 +288,9 @@ public class GuiController implements Initializable {
                 double y = (root.getHeight() - fh) * 0.5 - 40; // nudge board slightly upward
                 gameCluster.relocate(x, y);
                 
+                // Center game over panel on entire screen (not relative to game board)
+                centerGameOverPanel(root);
+                
                 // Position NEXT panel relative to game board's right edge
                 if (nextPanelVBox != null) {
                     double nextPanelX = x + fw + 20; // 20px gap from game board right edge
@@ -225,6 +308,27 @@ public class GuiController implements Initializable {
 
             reposition.run();
         });
+    }
+    
+    /**
+     * Center the game over panel on the entire screen
+     */
+    private void centerGameOverPanel(Pane root) {
+        if (groupNotification != null && root != null) {
+            // Wait for layout to calculate bounds
+            Platform.runLater(() -> {
+                double panelWidth = groupNotification.getBoundsInLocal().getWidth();
+                double panelHeight = groupNotification.getBoundsInLocal().getHeight();
+                if (panelWidth <= 0 || panelHeight <= 0) {
+                    // Use preferred size if bounds not calculated yet
+                    panelWidth = 500; // Approximate width
+                    panelHeight = 400; // Approximate height
+                }
+                double panelX = (root.getWidth() - panelWidth) * 0.5;
+                double panelY = (root.getHeight() - panelHeight) * 0.5;
+                groupNotification.relocate(panelX, panelY);
+            });
+        }
     }
 
     public void initGameView(int[][] boardMatrix, ViewData brick) {
@@ -271,12 +375,29 @@ public class GuiController implements Initializable {
         updateNextPiecesDisplay(brick);
 
 
+        // Determine initial speed based on game mode
+        long initialSpeed = 400; // Default for Classic mode
+        if (currentGameMode == GameMode.SPRINT) {
+            initialSpeed = 400; // Sprint mode: fixed 400ms
+        } else if (currentGameMode == GameMode.ULTRA) {
+            initialSpeed = currentSpeedInterval; // Ultra mode: starts at 400ms
+        } else if (currentGameMode == GameMode.SURVIVAL) {
+            initialSpeed = survivalSpeedInterval; // Survival mode: starts at 400ms, increases with score
+        }
+        
         timeLine = new Timeline(new KeyFrame(
-                Duration.millis(400),
+                Duration.millis(initialSpeed),
                 ae -> moveDown(new MoveEvent(EventType.DOWN, EventSource.THREAD))
         ));
         timeLine.setCycleCount(Timeline.INDEFINITE);
         timeLine.play();
+        
+        // Start mode-specific timers
+        if (currentGameMode == GameMode.SPRINT) {
+            startSprintTimer();
+        } else if (currentGameMode == GameMode.ULTRA) {
+            startUltraTimer();
+        }
     }
 
     private Paint getFillColor(int i) {
@@ -501,7 +622,24 @@ public class GuiController implements Initializable {
     }
 
     private void moveDown(MoveEvent event) {
-        if (isPause.getValue() == Boolean.FALSE) {
+        // Don't move if game is paused or game over
+        if (isPause.getValue() == Boolean.FALSE && isGameOver.getValue() == Boolean.FALSE) {
+            // Additional check for Ultra mode: stop if time is up
+            if (currentGameMode == GameMode.ULTRA && ultraStartTime > 0) {
+                long elapsed = System.currentTimeMillis() - ultraStartTime;
+                if (elapsed >= ULTRA_TIME_LIMIT) {
+                    // Time's up, stop moving immediately
+                    if (timeLine != null) {
+                        timeLine.stop();
+                    }
+                    isGameOver.setValue(true);
+                    Platform.runLater(() -> {
+                        ultraComplete();
+                    });
+                    return;
+                }
+            }
+            
             DownData downData = eventListener.onDownEvent(event);
             
             // Play sound when block lands (when clearRow is not null, it means block was merged)
@@ -515,6 +653,8 @@ public class GuiController implements Initializable {
                     NotificationPanel notificationPanel = new NotificationPanel("+" + downData.getClearRow().getScoreBonus());
                     groupNotification.getChildren().add(notificationPanel);
                     notificationPanel.showScore(groupNotification.getChildren());
+                    
+                    // Update Sprint mode lines count is handled in GameController
                 }
             }
             refreshBrick(downData.getViewData());
@@ -556,9 +696,617 @@ public class GuiController implements Initializable {
         if (scoreLabel != null) {
             scoreLabel.textProperty().bind(integerProperty.asString());
         }
+        
+        // Listen to score changes to update highest score
+        integerProperty.addListener((obs, oldVal, newVal) -> {
+            int currentScore = newVal.intValue();
+            if (currentScore > highestScore) {
+                highestScore = currentScore;
+                updateHighestScoreDisplay();
+                saveHighestScore(); // Save to file whenever highest score is updated
+            }
+            
+            // Check Survival mode speed increase (every 1500 points)
+            if (currentGameMode == GameMode.SURVIVAL) {
+                checkSurvivalSpeedIncrease(currentScore);
+            }
+        });
+        
+        // Initialize highest score display
+        updateHighestScoreDisplay();
+    }
+    
+    private void updateHighestScoreDisplay() {
+        if (highestScoreLabel != null) {
+            highestScoreLabel.setText(String.valueOf(highestScore));
+        }
+    }
+    
+    /**
+     * Load highest score from file on application startup
+     */
+    private void loadHighestScore() {
+        try {
+            File scoreFile = new File(HIGHEST_SCORE_FILE);
+            if (scoreFile.exists() && scoreFile.canRead()) {
+                try (BufferedReader reader = new BufferedReader(new FileReader(scoreFile))) {
+                    String line = reader.readLine();
+                    if (line != null && !line.trim().isEmpty()) {
+                        highestScore = Integer.parseInt(line.trim());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // If file doesn't exist or can't be read, start with 0
+            System.out.println("Could not load highest score: " + e.getMessage());
+            highestScore = 0;
+        }
+        
+        // Update display with loaded score
+        Platform.runLater(() -> updateHighestScoreDisplay());
+    }
+    
+    /**
+     * Save highest score to file whenever it's updated
+     */
+    private void saveHighestScore() {
+        try {
+            File scoreFile = new File(HIGHEST_SCORE_FILE);
+            try (PrintWriter writer = new PrintWriter(new FileWriter(scoreFile))) {
+                writer.println(highestScore);
+            }
+        } catch (Exception e) {
+            System.out.println("Could not save highest score: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Set the current game mode (called by GameController)
+     */
+    public void setGameMode(GameMode mode) {
+        currentGameMode = mode;
+        System.out.println("Game mode set to: " + mode.getDisplayName());
+        
+        // Show/hide mode-specific UI
+        if (mode == GameMode.SPRINT) {
+            if (sprintModeDisplay != null) {
+                sprintModeDisplay.setVisible(true);
+                sprintModeDisplay.setManaged(true);
+            }
+            if (ultraModeDisplay != null) {
+                ultraModeDisplay.setVisible(false);
+                ultraModeDisplay.setManaged(false);
+            }
+            loadSprintBestTime();
+            updateSprintBestTimeDisplay();
+        } else if (mode == GameMode.ULTRA) {
+            if (ultraModeDisplay != null) {
+                ultraModeDisplay.setVisible(true);
+                ultraModeDisplay.setManaged(true);
+            }
+            if (sprintModeDisplay != null) {
+                sprintModeDisplay.setVisible(false);
+                sprintModeDisplay.setManaged(false);
+            }
+            if (survivalModeDisplay != null) {
+                survivalModeDisplay.setVisible(false);
+                survivalModeDisplay.setManaged(false);
+            }
+            loadUltraBestScore();
+        } else if (mode == GameMode.SURVIVAL) {
+            if (survivalModeDisplay != null) {
+                survivalModeDisplay.setVisible(true);
+                survivalModeDisplay.setManaged(true);
+            }
+            if (sprintModeDisplay != null) {
+                sprintModeDisplay.setVisible(false);
+                sprintModeDisplay.setManaged(false);
+            }
+            if (ultraModeDisplay != null) {
+                ultraModeDisplay.setVisible(false);
+                ultraModeDisplay.setManaged(false);
+            }
+            loadSurvivalHighestLevel();
+        } else {
+            if (sprintModeDisplay != null) {
+                sprintModeDisplay.setVisible(false);
+                sprintModeDisplay.setManaged(false);
+            }
+            if (ultraModeDisplay != null) {
+                ultraModeDisplay.setVisible(false);
+                ultraModeDisplay.setManaged(false);
+            }
+            if (survivalModeDisplay != null) {
+                survivalModeDisplay.setVisible(false);
+                survivalModeDisplay.setManaged(false);
+            }
+        }
+    }
+    
+    /**
+     * Get the current game mode
+     */
+    public GameMode getGameMode() {
+        return currentGameMode;
+    }
+    
+    /**
+     * Load Ultra mode best score from file
+     */
+    private void loadUltraBestScore() {
+        try {
+            File scoreFile = new File(ULTRA_BEST_SCORE_FILE);
+            if (scoreFile.exists() && scoreFile.canRead()) {
+                try (BufferedReader reader = new BufferedReader(new FileReader(scoreFile))) {
+                    String line = reader.readLine();
+                    if (line != null && !line.trim().isEmpty()) {
+                        ultraBestScore = Integer.parseInt(line.trim());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Could not load Ultra best score: " + e.getMessage());
+            ultraBestScore = 0;
+        }
+        updateUltraBestScoreDisplay();
+    }
+    
+    /**
+     * Save Ultra mode best score to file
+     */
+    private void saveUltraBestScore() {
+        try {
+            File scoreFile = new File(ULTRA_BEST_SCORE_FILE);
+            try (PrintWriter writer = new PrintWriter(new FileWriter(scoreFile))) {
+                writer.println(ultraBestScore);
+            }
+        } catch (Exception e) {
+            System.out.println("Could not save Ultra best score: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Update Ultra best score display
+     */
+    private void updateUltraBestScoreDisplay() {
+        if (ultraBestScoreLabel != null) {
+            Platform.runLater(() -> {
+                ultraBestScoreLabel.setText(String.valueOf(ultraBestScore));
+            });
+        }
+    }
+    
+    /**
+     * Load Survival mode highest level from file
+     */
+    private void loadSurvivalHighestLevel() {
+        try {
+            File levelFile = new File(SURVIVAL_HIGHEST_LEVEL_FILE);
+            if (levelFile.exists() && levelFile.canRead()) {
+                try (BufferedReader reader = new BufferedReader(new FileReader(levelFile))) {
+                    String line = reader.readLine();
+                    if (line != null && !line.trim().isEmpty()) {
+                        survivalHighestLevel = Integer.parseInt(line.trim());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Could not load Survival highest level: " + e.getMessage());
+            survivalHighestLevel = 1;
+        }
+        updateSurvivalHighestLevelDisplay();
+    }
+    
+    /**
+     * Save Survival mode highest level to file
+     */
+    private void saveSurvivalHighestLevel() {
+        try {
+            File levelFile = new File(SURVIVAL_HIGHEST_LEVEL_FILE);
+            try (PrintWriter writer = new PrintWriter(new FileWriter(levelFile))) {
+                writer.println(survivalHighestLevel);
+            }
+        } catch (Exception e) {
+            System.out.println("Could not save Survival highest level: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Update Survival highest level display
+     */
+    private void updateSurvivalHighestLevelDisplay() {
+        if (survivalHighestLevelLabel != null) {
+            Platform.runLater(() -> {
+                survivalHighestLevelLabel.setText(String.valueOf(survivalHighestLevel));
+            });
+        }
+    }
+    
+    /**
+     * Initialize Survival mode
+     */
+    private void initializeSurvivalMode() {
+        survivalSpeedLevel = 1;
+        survivalSpeedInterval = 400;
+        survivalNextThreshold = SURVIVAL_SPEED_INCREASE_THRESHOLD;
+        updateSurvivalDisplay();
+    }
+    
+    /**
+     * Update Survival mode display
+     */
+    private void updateSurvivalDisplay() {
+        if (survivalSpeedLevelLabel != null) {
+            Platform.runLater(() -> {
+                survivalSpeedLevelLabel.setText(String.valueOf(survivalSpeedLevel));
+            });
+        }
+        if (survivalNextThresholdLabel != null) {
+            Platform.runLater(() -> {
+                survivalNextThresholdLabel.setText(String.valueOf(survivalNextThreshold));
+            });
+        }
+    }
+    
+    /**
+     * Check if Survival mode speed should increase (every 1500 points)
+     */
+    public void checkSurvivalSpeedIncrease(int currentScore) {
+        if (currentGameMode == GameMode.SURVIVAL && currentScore >= survivalNextThreshold) {
+            survivalSpeedLevel++;
+            // Decrease interval (make faster): 400ms -> 350ms -> 300ms -> 250ms -> 200ms, etc.
+            // Keep at 400ms for now (can be adjusted later)
+            survivalSpeedInterval = 400;
+            
+            // Update next threshold
+            survivalNextThreshold += SURVIVAL_SPEED_INCREASE_THRESHOLD;
+            
+            // Update highest level if this is better
+            if (survivalSpeedLevel > survivalHighestLevel) {
+                survivalHighestLevel = survivalSpeedLevel;
+                saveSurvivalHighestLevel();
+                updateSurvivalHighestLevelDisplay();
+            }
+            
+            // Update game timeline speed
+            if (timeLine != null && currentGameMode == GameMode.SURVIVAL) {
+                timeLine.stop();
+                timeLine = new Timeline(new KeyFrame(
+                        Duration.millis(survivalSpeedInterval),
+                        ae -> moveDown(new MoveEvent(EventType.DOWN, EventSource.THREAD))
+                ));
+                timeLine.setCycleCount(Timeline.INDEFINITE);
+                timeLine.play();
+            }
+            
+            updateSurvivalDisplay();
+        }
+    }
+    
+    /**
+     * Start Ultra mode timer and speed progression
+     */
+    private void startUltraTimer() {
+        ultraStartTime = System.currentTimeMillis();
+        ultraSpeedLevel = 1;
+        currentSpeedInterval = 400; // Start at 400ms
+        
+        // Update initial display
+        updateUltraTimerDisplay();
+        updateUltraSpeedLevelDisplay();
+        
+        if (ultraTimer != null) {
+            ultraTimer.stop();
+        }
+        
+        // Timer that updates every 100ms for smooth display
+        ultraTimer = new Timeline(new KeyFrame(
+                Duration.millis(100),
+                ae -> {
+                    updateUltraTimerDisplay();
+                    checkUltraSpeedIncrease();
+                }
+        ));
+        ultraTimer.setCycleCount(Timeline.INDEFINITE);
+        ultraTimer.play();
+    }
+    
+    /**
+     * Stop Ultra mode timer
+     */
+    private void stopUltraTimer() {
+        if (ultraTimer != null) {
+            ultraTimer.stop();
+        }
+    }
+    
+    /**
+     * Update Ultra mode timer display (countdown from 2 minutes)
+     */
+    private void updateUltraTimerDisplay() {
+        if (ultraStartTime > 0 && ultraTimerLabel != null && !isGameOver.getValue()) {
+            long elapsed = System.currentTimeMillis() - ultraStartTime;
+            long remaining = ULTRA_TIME_LIMIT - elapsed;
+            
+            if (remaining <= 0) {
+                // Time's up! Stop immediately
+                ultraTimerLabel.setText("00:00");
+                // Stop timeline immediately to prevent blocks from falling
+                if (timeLine != null) {
+                    timeLine.stop();
+                }
+                // Set game over state to prevent any further moves
+                isGameOver.setValue(true);
+                // Then show completion screen
+                Platform.runLater(() -> {
+                    ultraComplete();
+                });
+            } else {
+                long seconds = remaining / 1000;
+                long minutes = seconds / 60;
+                seconds = seconds % 60;
+                ultraTimerLabel.setText(String.format("%02d:%02d", minutes, seconds));
+            }
+        }
+    }
+    
+    /**
+     * Update Ultra mode speed level display
+     */
+    private void updateUltraSpeedLevelDisplay() {
+        if (ultraSpeedLevelLabel != null) {
+            Platform.runLater(() -> {
+                ultraSpeedLevelLabel.setText(String.valueOf(ultraSpeedLevel));
+            });
+        }
+    }
+    
+    /**
+     * Check if speed should increase (every 20 seconds)
+     */
+    private void checkUltraSpeedIncrease() {
+        if (ultraStartTime > 0) {
+            long elapsed = System.currentTimeMillis() - ultraStartTime;
+            int expectedLevel = (int) (elapsed / ULTRA_SPEED_INCREASE_INTERVAL) + 1;
+            
+            if (expectedLevel > ultraSpeedLevel) {
+                ultraSpeedLevel = expectedLevel;
+                // Keep at 400ms for all levels (can be adjusted later)
+                currentSpeedInterval = 400;
+                
+                // Update game timeline speed
+                if (timeLine != null && currentGameMode == GameMode.ULTRA) {
+                    timeLine.stop();
+                    timeLine = new Timeline(new KeyFrame(
+                            Duration.millis(currentSpeedInterval),
+                            ae -> moveDown(new MoveEvent(EventType.DOWN, EventSource.THREAD))
+                    ));
+                    timeLine.setCycleCount(Timeline.INDEFINITE);
+                    timeLine.play();
+                }
+                
+                updateUltraSpeedLevelDisplay();
+            }
+        }
+    }
+    
+    /**
+     * Ultra mode completed - time's up!
+     */
+    public void ultraComplete() {
+        // Stop Ultra timer
+        stopUltraTimer();
+        
+        // Ensure game timeline is stopped (should already be stopped, but double-check)
+        if (timeLine != null) {
+            timeLine.stop();
+        }
+        
+        // Ensure game over state is set
+        isGameOver.setValue(true);
+        
+        // Get final score from score label
+        int finalScore = 0;
+        try {
+            if (scoreLabel != null && scoreLabel.getText() != null) {
+                finalScore = Integer.parseInt(scoreLabel.getText().trim());
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("Could not parse final score: " + e.getMessage());
+        }
+        
+        // Update best score if this is better
+        boolean isNewBest = false;
+        if (finalScore > ultraBestScore) {
+            ultraBestScore = finalScore;
+            saveUltraBestScore();
+            updateUltraBestScoreDisplay();
+            isNewBest = true;
+        }
+        
+        // Show completion message
+        isGameOver.setValue(true);
+        gameOverPanel.setVisible(true);
+        
+        String successMessage = "TIME'S UP!";
+        if (isNewBest) {
+            successMessage = "NEW RECORD!";
+        }
+        gameOverPanel.setGameOverMessage(successMessage);
+        
+        // Show final score
+        String bestScoreStr = String.valueOf(ultraBestScore);
+        String currentScoreStr = String.valueOf(finalScore);
+        gameOverPanel.setTimeInfo("BEST SCORE: " + bestScoreStr, "FINAL SCORE: " + currentScoreStr);
+        
+        // Center the game over panel on screen
+        Parent parent = gameBoard.getParent();
+        if (parent instanceof Pane) {
+            centerGameOverPanel((Pane) parent);
+        }
+        
+        // Play completion sound
+        playLineClearSound();
+        
+        gamePanel.requestFocus();
+    }
+    
+    /**
+     * Start Sprint mode timer
+     */
+    private void startSprintTimer() {
+        sprintStartTime = System.currentTimeMillis();
+        if (sprintTimer != null) {
+            sprintTimer.stop();
+        }
+        sprintTimer = new Timeline(new KeyFrame(
+                Duration.millis(100), // Update every 100ms for smooth display
+                ae -> updateSprintTimer()
+        ));
+        sprintTimer.setCycleCount(Timeline.INDEFINITE);
+        sprintTimer.play();
+    }
+    
+    /**
+     * Update Sprint mode timer display
+     */
+    private void updateSprintTimer() {
+        if (sprintStartTime > 0 && sprintTimerLabel != null) {
+            long elapsed = System.currentTimeMillis() - sprintStartTime;
+            long seconds = elapsed / 1000;
+            long minutes = seconds / 60;
+            seconds = seconds % 60;
+            sprintTimerLabel.setText(String.format("%02d:%02d", minutes, seconds));
+        }
+    }
+    
+    /**
+     * Update Sprint lines count (called from GameController after lines are cleared)
+     */
+    public void updateSprintLines(int linesCleared) {
+        if (sprintLinesLabel != null) {
+            Platform.runLater(() -> {
+                sprintLinesLabel.setText(linesCleared + " / 40");
+            });
+        }
+    }
+    
+    /**
+     * Sprint mode completed - show completion screen
+     */
+    public void sprintComplete() {
+        if (sprintTimer != null) {
+            sprintTimer.stop();
+        }
+        
+        long elapsedTime = System.currentTimeMillis() - sprintStartTime;
+        boolean isNewBest = false;
+        
+        // Update best time if this is better
+        if (elapsedTime < sprintBestTime) {
+            sprintBestTime = elapsedTime;
+            saveSprintBestTime();
+            updateSprintBestTimeDisplay();
+            isNewBest = true;
+        }
+        
+        // Stop game timeline
+        if (timeLine != null) {
+            timeLine.stop();
+        }
+        
+        // Show big success message
+        isGameOver.setValue(true);
+        gameOverPanel.setVisible(true);
+        
+        String successMessage = "SUCCESS!";
+        if (isNewBest) {
+            successMessage = "NEW RECORD!";
+        }
+        gameOverPanel.setGameOverMessage(successMessage);
+        
+        // Show best time and current time
+        String bestTimeStr = (sprintBestTime == Long.MAX_VALUE) ? "--:--" : formatTime(sprintBestTime);
+        String currentTimeStr = formatTime(elapsedTime);
+        gameOverPanel.setTimeInfo(bestTimeStr, currentTimeStr);
+        
+        // Center the game over panel on screen
+        Parent parent = gameBoard.getParent();
+        if (parent instanceof Pane) {
+            centerGameOverPanel((Pane) parent);
+        }
+        
+        // Play completion sound
+        playLineClearSound();
+        
+        gamePanel.requestFocus();
+    }
+    
+    /**
+     * Format time in milliseconds to MM:SS format
+     */
+    private String formatTime(long milliseconds) {
+        long seconds = milliseconds / 1000;
+        long minutes = seconds / 60;
+        seconds = seconds % 60;
+        return String.format("%02d:%02d", minutes, seconds);
+    }
+    
+    /**
+     * Load Sprint best time from file
+     */
+    private void loadSprintBestTime() {
+        try {
+            File timeFile = new File(SPRINT_BEST_TIME_FILE);
+            if (timeFile.exists() && timeFile.canRead()) {
+                try (BufferedReader reader = new BufferedReader(new FileReader(timeFile))) {
+                    String line = reader.readLine();
+                    if (line != null && !line.trim().isEmpty()) {
+                        sprintBestTime = Long.parseLong(line.trim());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Could not load Sprint best time: " + e.getMessage());
+            sprintBestTime = Long.MAX_VALUE;
+        }
+    }
+    
+    /**
+     * Save Sprint best time to file
+     */
+    private void saveSprintBestTime() {
+        try {
+            File timeFile = new File(SPRINT_BEST_TIME_FILE);
+            try (PrintWriter writer = new PrintWriter(new FileWriter(timeFile))) {
+                writer.println(sprintBestTime);
+            }
+        } catch (Exception e) {
+            System.out.println("Could not save Sprint best time: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Update Sprint best time display
+     */
+    private void updateSprintBestTimeDisplay() {
+        if (sprintBestTimeLabel != null) {
+            Platform.runLater(() -> {
+                if (sprintBestTime == Long.MAX_VALUE) {
+                    sprintBestTimeLabel.setText("--:--");
+                } else {
+                    sprintBestTimeLabel.setText(formatTime(sprintBestTime));
+                }
+            });
+        }
     }
 
     public void gameOver() {
+        // Stop Ultra timer if in Ultra mode
+        if (currentGameMode == GameMode.ULTRA) {
+            stopUltraTimer();
+        }
+        
         // Lower background music volume instead of stopping (hybrid approach)
         if (gameplayBackgroundMusic != null) {
             gameplayBackgroundMusic.setVolume(0.15); // Lower to 15% volume
@@ -569,7 +1317,14 @@ public class GuiController implements Initializable {
         
         timeLine.stop();
         gameOverPanel.setVisible(true);
+        gameOverPanel.resetToDefault(); // Reset to default game over display
         isGameOver.setValue(Boolean.TRUE);
+        
+        // Center the game over panel on screen
+        Parent parent = gameBoard.getParent();
+        if (parent instanceof Pane) {
+            centerGameOverPanel((Pane) parent);
+        }
         
         // Ensure focus is on gamePanel so keyboard controls work for game over
         Platform.runLater(() -> {
@@ -580,17 +1335,82 @@ public class GuiController implements Initializable {
     public void newGame(ActionEvent actionEvent) {
         timeLine.stop();
         gameOverPanel.setVisible(false);
+        gameOverPanel.resetToDefault(); // Reset game over panel to default state
         
         // Restore background music to normal volume when starting new game
         if (gameplayBackgroundMusic != null) {
             gameplayBackgroundMusic.setVolume(0.4); // Restore to 40% volume
         }
         
+        // Reset mode-specific variables
+        if (currentGameMode == GameMode.SPRINT) {
+            if (sprintTimer != null) {
+                sprintTimer.stop();
+            }
+            sprintStartTime = 0;
+            if (sprintLinesLabel != null) {
+                sprintLinesLabel.setText("0 / 40");
+            }
+            if (sprintTimerLabel != null) {
+                sprintTimerLabel.setText("00:00");
+            }
+        } else if (currentGameMode == GameMode.ULTRA) {
+            if (ultraTimer != null) {
+                ultraTimer.stop();
+            }
+            ultraStartTime = 0;
+            ultraSpeedLevel = 1;
+            currentSpeedInterval = 400;
+            if (ultraTimerLabel != null) {
+                ultraTimerLabel.setText("02:00");
+            }
+            if (ultraSpeedLevelLabel != null) {
+                ultraSpeedLevelLabel.setText("1");
+            }
+        } else if (currentGameMode == GameMode.SURVIVAL) {
+            survivalSpeedLevel = 1;
+            survivalSpeedInterval = 400;
+            survivalNextThreshold = SURVIVAL_SPEED_INCREASE_THRESHOLD;
+            if (survivalSpeedLevelLabel != null) {
+                survivalSpeedLevelLabel.setText("1");
+            }
+            if (survivalNextThresholdLabel != null) {
+                survivalNextThresholdLabel.setText("1500");
+            }
+        }
+        
         eventListener.createNewGame();
         gamePanel.requestFocus();
+        
+        // Reset timeline with correct speed for mode
+        long initialSpeed = 400;
+        if (currentGameMode == GameMode.SPRINT) {
+            initialSpeed = 400;
+        } else if (currentGameMode == GameMode.ULTRA) {
+            initialSpeed = currentSpeedInterval;
+        } else if (currentGameMode == GameMode.SURVIVAL) {
+            initialSpeed = survivalSpeedInterval;
+        }
+        
+        timeLine.stop();
+        timeLine = new Timeline(new KeyFrame(
+                Duration.millis(initialSpeed),
+                ae -> moveDown(new MoveEvent(EventType.DOWN, EventSource.THREAD))
+        ));
+        timeLine.setCycleCount(Timeline.INDEFINITE);
         timeLine.play();
+        
         isPause.setValue(Boolean.FALSE);
         isGameOver.setValue(Boolean.FALSE);
+        
+        // Restart mode-specific timers
+        if (currentGameMode == GameMode.SPRINT) {
+            startSprintTimer();
+        } else if (currentGameMode == GameMode.ULTRA) {
+            startUltraTimer();
+        } else if (currentGameMode == GameMode.SURVIVAL) {
+            initializeSurvivalMode();
+        }
     }
 
     public void pauseGame(ActionEvent actionEvent) {

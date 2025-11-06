@@ -24,7 +24,7 @@
     <VBox alignment="CENTER" spacing="30" maxWidth="400">
         
         <!-- Title -->
-        <Label text="TETRIS" styleClass="game-title">
+        <Label fx:id="titleLabel" text="TETRIS" styleClass="game-title">
             <font>
                 <Font name="Arial Bold" size="96"/>
             </font>
@@ -40,7 +40,7 @@
         <!-- Menu Buttons (Initially Hidden) -->
         <VBox fx:id="menuButtonsContainer" alignment="CENTER" spacing="20" maxWidth="300" visible="false" managed="false">
             
-            <Button fx:id="singlePlayerBtn" text="Single Player" onAction="#startSinglePlayer" styleClass="menu-button">
+            <Button fx:id="singlePlayerBtn" text="Single Player" onAction="#showModeSelection" styleClass="menu-button">
                 <font>
                     <Font name="Arial Bold" size="16"/>
                 </font>
@@ -77,6 +77,53 @@
             </Button>
             
             <Button fx:id="exitBtn" text="Exit Game" onAction="#exitGame" styleClass="menu-button-exit">
+                <font>
+                    <Font name="Arial Bold" size="16"/>
+                </font>
+            </Button>
+            
+        </VBox>
+        
+        <!-- Mode Selection Buttons (Initially Hidden) -->
+        <VBox fx:id="modeButtonsContainer" alignment="CENTER" spacing="20" maxWidth="350" visible="false" managed="false">
+            
+            <Button fx:id="classicBtn" text="CLASSIC" onAction="#selectClassic" styleClass="mode-button">
+                <font>
+                    <Font name="Arial Bold" size="18"/>
+                </font>
+                <effect>
+                    <Glow level="0.3"/>
+                </effect>
+            </Button>
+            
+            <Button fx:id="sprintBtn" text="SPRINT" onAction="#selectSprint" styleClass="mode-button">
+                <font>
+                    <Font name="Arial Bold" size="18"/>
+                </font>
+                <effect>
+                    <Glow level="0.3"/>
+                </effect>
+            </Button>
+            
+            <Button fx:id="ultraBtn" text="ULTRA" onAction="#selectUltra" styleClass="mode-button">
+                <font>
+                    <Font name="Arial Bold" size="18"/>
+                </font>
+                <effect>
+                    <Glow level="0.3"/>
+                </effect>
+            </Button>
+            
+            <Button fx:id="survivalBtn" text="SURVIVAL" onAction="#selectSurvival" styleClass="mode-button">
+                <font>
+                    <Font name="Arial Bold" size="18"/>
+                </font>
+                <effect>
+                    <Glow level="0.3"/>
+                </effect>
+            </Button>
+            
+            <Button fx:id="backToMenuBtn" text="BACK" onAction="#backToMainMenu" styleClass="menu-button-exit" style="-fx-pref-width: 280;">
                 <font>
                     <Font name="Arial Bold" size="16"/>
                 </font>

@@ -5,13 +5,24 @@ public class GameController implements InputEventListener {
     private Board board = new SimpleBoard(25, 10);
 
     private final GuiController viewGuiController;
+    private GameMode currentMode;
 
     public GameController(GuiController c) {
+        this(c, GameMode.CLASSIC); // Default to Classic mode for backward compatibility
+    }
+    
+    public GameController(GuiController c, GameMode mode) {
         viewGuiController = c;
+        currentMode = mode;
         board.createNewBrick();
         viewGuiController.setEventListener(this);
+        viewGuiController.setGameMode(mode); // Pass mode to GuiController FIRST (before initGameView)
         viewGuiController.initGameView(board.getBoardMatrix(), board.getViewData());
         viewGuiController.bindScore(board.getScore().scoreProperty());
+    }
+    
+    public GameMode getCurrentMode() {
+        return currentMode;
     }
 
     @Override
@@ -24,6 +35,17 @@ public class GameController implements InputEventListener {
             if (clearRow.getLinesRemoved() > 0) {
                 board.getScore().add(clearRow.getScoreBonus());
             }
+            
+            // Check Sprint mode completion (40 lines)
+            if (currentMode == GameMode.SPRINT) {
+                int linesCleared = ((SimpleBoard) board).getTotalLinesCleared();
+                viewGuiController.updateSprintLines(linesCleared);
+                if (linesCleared >= 40) {
+                    viewGuiController.sprintComplete();
+                    return new DownData(clearRow, board.getViewData());
+                }
+            }
+            
             if (board.createNewBrick()) {
                 viewGuiController.gameOver();
             }
@@ -71,6 +93,16 @@ public class GameController implements InputEventListener {
         ClearRow clearRow = board.clearRows();
         if (clearRow.getLinesRemoved() > 0) {
             board.getScore().add(clearRow.getScoreBonus());
+        }
+        
+        // Check Sprint mode completion (40 lines)
+        if (currentMode == GameMode.SPRINT) {
+            int linesCleared = ((SimpleBoard) board).getTotalLinesCleared();
+            viewGuiController.updateSprintLines(linesCleared);
+            if (linesCleared >= 40) {
+                viewGuiController.sprintComplete();
+                return new DownData(clearRow, board.getViewData());
+            }
         }
         
         if (board.createNewBrick()) {

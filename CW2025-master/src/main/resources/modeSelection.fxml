@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.effect.Glow?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.media.MediaView?>
+<?import javafx.scene.paint.Color?>
+<?import javafx.scene.text.Font?>
+<?import java.net.URL?>
+
+<StackPane fx:controller="com.comp2042.ModeSelectionController" xmlns:fx="http://javafx.com/fxml" styleClass="menu-background">
+    
+    <!-- Video Background (Full Screen) -->
+    <MediaView fx:id="backgroundVideo" preserveRatio="false" 
+               StackPane.alignment="CENTER"/>
+    
+    <!-- Dark Overlay (40% darker as requested) -->
+    <Region styleClass="background-overlay"/>
+    
+    <!-- Main Content -->
+    <VBox alignment="CENTER" spacing="30" maxWidth="500">
+        
+        <!-- Title -->
+        <Label text="SELECT MODE" styleClass="game-title">
+            <font>
+                <Font name="Arial Bold" size="72"/>
+            </font>
+        </Label>
+        
+        <!-- Mode Buttons -->
+        <VBox fx:id="modeButtonsContainer" alignment="CENTER" spacing="20" maxWidth="350">
+            
+            <Button fx:id="classicBtn" text="CLASSIC" onAction="#selectClassic" styleClass="mode-button">
+                <font>
+                    <Font name="Arial Bold" size="18"/>
+                </font>
+                <effect>
+                    <Glow level="0.3"/>
+                </effect>
+                <tooltip>
+                    <Tooltip text="Endless Tetris - Play until you lose"/>
+                </tooltip>
+            </Button>
+            
+            <Button fx:id="sprintBtn" text="SPRINT" onAction="#selectSprint" styleClass="mode-button">
+                <font>
+                    <Font name="Arial Bold" size="18"/>
+                </font>
+                <effect>
+                    <Glow level="0.3"/>
+                </effect>
+                <tooltip>
+                    <Tooltip text="Clear 40 lines as fast as possible"/>
+                </tooltip>
+            </Button>
+            
+            <Button fx:id="ultraBtn" text="ULTRA" onAction="#selectUltra" styleClass="mode-button">
+                <font>
+                    <Font name="Arial Bold" size="18"/>
+                </font>
+                <effect>
+                    <Glow level="0.3"/>
+                </effect>
+                <tooltip>
+                    <Tooltip text="Score as much as possible in 2 minutes"/>
+                </tooltip>
+            </Button>
+            
+            <Button fx:id="survivalBtn" text="SURVIVAL" onAction="#selectSurvival" styleClass="mode-button">
+                <font>
+                    <Font name="Arial Bold" size="18"/>
+                </font>
+                <effect>
+                    <Glow level="0.3"/>
+                </effect>
+                <tooltip>
+                    <Tooltip text="Speed increases as you survive longer"/>
+                </tooltip>
+            </Button>
+            
+            <!-- Back Button -->
+            <Button fx:id="backBtn" text="BACK" onAction="#goBack" styleClass="menu-button-exit" style="-fx-pref-width: 200;">
+                <font>
+                    <Font name="Arial Bold" size="16"/>
+                </font>
+            </Button>
+            
+        </VBox>
+        
+    </VBox>
+    
+    <!-- Stylesheets -->
+    <stylesheets>
+        <URL value="@menuStyle.css"/>
+    </stylesheets>
+    
+</StackPane>

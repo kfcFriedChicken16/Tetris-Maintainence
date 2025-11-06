@@ -17,6 +17,7 @@ public class SimpleBoard implements Board {
     private int[][] currentGameMatrix;
     private Point currentOffset;
     private final Score score;
+    private int totalLinesCleared = 0; // Track total lines cleared for Sprint mode
 
     public SimpleBoard(int width, int height) {
         this.width = width;
@@ -187,8 +188,17 @@ public class SimpleBoard implements Board {
     public ClearRow clearRows() {
         ClearRow clearRow = MatrixOperations.checkRemoving(currentGameMatrix);
         currentGameMatrix = clearRow.getNewMatrix();
+        // Track total lines cleared for Sprint mode
+        totalLinesCleared += clearRow.getLinesRemoved();
         return clearRow;
 
+    }
+    
+    /**
+     * Get total lines cleared (for Sprint mode)
+     */
+    public int getTotalLinesCleared() {
+        return totalLinesCleared;
     }
 
     @Override
@@ -201,6 +211,7 @@ public class SimpleBoard implements Board {
     public void newGame() {
         currentGameMatrix = new int[width][height];
         score.reset();
+        totalLinesCleared = 0; // Reset lines cleared counter
         createNewBrick();
     }
 }

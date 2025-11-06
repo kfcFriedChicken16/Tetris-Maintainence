@@ -28,7 +28,7 @@
             </center>
         </BorderPane>
 
-    <Group fx:id="groupNotification" layoutX="14" layoutY="203">
+    <Group fx:id="groupNotification">
         <VBox alignment="CENTER">
             <GameOverPanel fx:id="gameOverPanel"/>
         </VBox>
@@ -41,8 +41,50 @@
     
     <!-- Score Display -->
     <VBox layoutX="220" layoutY="10" spacing="5">
-        <Label text="SCORE" styleClass="score-label"/>
+        <Label text="HIGHEST SCORE" styleClass="score-label"/>
+        <Label fx:id="highestScoreLabel" text="0" styleClass="scoreClass"/>
+        <Region prefHeight="10" maxHeight="10" minHeight="10"/>
+        <Label text="CURRENT SCORE" styleClass="score-label"/>
         <Label fx:id="scoreLabel" text="0" styleClass="scoreClass"/>
+    </VBox>
+    
+    <!-- Sprint Mode Display (Hidden by default, shown only in Sprint mode) -->
+    <VBox fx:id="sprintModeDisplay" layoutX="220" layoutY="150" spacing="5" visible="false" managed="false">
+        <Label text="SPRINT MODE" styleClass="score-label"/>
+        <Label text="LINES: " styleClass="score-label"/>
+        <Label fx:id="sprintLinesLabel" text="0 / 40" styleClass="scoreClass"/>
+        <Region prefHeight="10" maxHeight="10" minHeight="10"/>
+        <Label text="TIME: " styleClass="score-label"/>
+        <Label fx:id="sprintTimerLabel" text="00:00" styleClass="scoreClass"/>
+        <Region prefHeight="10" maxHeight="10" minHeight="10"/>
+        <Label text="BEST TIME: " styleClass="score-label"/>
+        <Label fx:id="sprintBestTimeLabel" text="--:--" styleClass="scoreClass"/>
+    </VBox>
+    
+    <!-- Ultra Mode Display (Hidden by default, shown only in Ultra mode) -->
+    <VBox fx:id="ultraModeDisplay" layoutX="220" layoutY="150" spacing="5" visible="false" managed="false">
+        <Label text="ULTRA MODE" styleClass="score-label"/>
+        <Label text="TIME: " styleClass="score-label"/>
+        <Label fx:id="ultraTimerLabel" text="02:00" styleClass="scoreClass"/>
+        <Region prefHeight="10" maxHeight="10" minHeight="10"/>
+        <Label text="SPEED LEVEL: " styleClass="score-label"/>
+        <Label fx:id="ultraSpeedLevelLabel" text="1" styleClass="scoreClass"/>
+        <Region prefHeight="10" maxHeight="10" minHeight="10"/>
+        <Label text="BEST SCORE: " styleClass="score-label"/>
+        <Label fx:id="ultraBestScoreLabel" text="0" styleClass="scoreClass"/>
+    </VBox>
+    
+    <!-- Survival Mode Display (Hidden by default, shown only in Survival mode) -->
+    <VBox fx:id="survivalModeDisplay" layoutX="220" layoutY="150" spacing="5" visible="false" managed="false">
+        <Label text="SURVIVAL MODE" styleClass="score-label"/>
+        <Label text="SPEED LEVEL: " styleClass="score-label"/>
+        <Label fx:id="survivalSpeedLevelLabel" text="1" styleClass="scoreClass"/>
+        <Region prefHeight="10" maxHeight="10" minHeight="10"/>
+        <Label text="NEXT SPEED UP: " styleClass="score-label"/>
+        <Label fx:id="survivalNextThresholdLabel" text="1500" styleClass="scoreClass"/>
+        <Region prefHeight="10" maxHeight="10" minHeight="10"/>
+        <Label text="HIGHEST LEVEL: " styleClass="score-label"/>
+        <Label fx:id="survivalHighestLevelLabel" text="1" styleClass="scoreClass"/>
     </VBox>
     
     <!-- NEXT Panel (Right Side) -->
