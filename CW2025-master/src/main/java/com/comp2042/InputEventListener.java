@@ -11,6 +11,12 @@ public interface InputEventListener {
     ViewData onRotateEvent(MoveEvent event);
 
     DownData onHardDropEvent(MoveEvent event);
+    
+    /**
+     * Hold the current piece
+     * @return ViewData with the new current piece after holding
+     */
+    ViewData onHoldEvent();
 
     void createNewGame();
 }

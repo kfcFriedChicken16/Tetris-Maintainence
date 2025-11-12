@@ -12,6 +12,7 @@ public final class ViewData {
     private final int[][] nextBrickData;
     private final List<int[][]> nextBricksList; // List of next 4 bricks
     private final Point ghostPosition;
+    private final int[][] heldBrickData; // Currently held piece (null if nothing held)
 
     public ViewData(int[][] brickData, int xPosition, int yPosition, int[][] nextBrickData) {
         this.brickData = brickData;
@@ -20,6 +21,7 @@ public final class ViewData {
         this.nextBrickData = nextBrickData;
         this.nextBricksList = null;
         this.ghostPosition = null; // No ghost position for this constructor
+        this.heldBrickData = null;
     }
 
     public ViewData(int[][] brickData, int xPosition, int yPosition, int[][] nextBrickData, Point ghostPosition) {
@@ -29,6 +31,7 @@ public final class ViewData {
         this.nextBrickData = nextBrickData;
         this.nextBricksList = null;
         this.ghostPosition = ghostPosition;
+        this.heldBrickData = null;
     }
 
     public ViewData(int[][] brickData, int xPosition, int yPosition, int[][] nextBrickData, 
@@ -39,6 +42,18 @@ public final class ViewData {
         this.nextBrickData = nextBrickData;
         this.nextBricksList = nextBricksList != null ? new ArrayList<>(nextBricksList) : null;
         this.ghostPosition = ghostPosition;
+        this.heldBrickData = null;
+    }
+    
+    public ViewData(int[][] brickData, int xPosition, int yPosition, int[][] nextBrickData, 
+                    List<int[][]> nextBricksList, Point ghostPosition, int[][] heldBrickData) {
+        this.brickData = brickData;
+        this.xPosition = xPosition;
+        this.yPosition = yPosition;
+        this.nextBrickData = nextBrickData;
+        this.nextBricksList = nextBricksList != null ? new ArrayList<>(nextBricksList) : null;
+        this.ghostPosition = ghostPosition;
+        this.heldBrickData = heldBrickData != null ? MatrixOperations.copy(heldBrickData) : null;
     }
 
     public int[][] getBrickData() {
@@ -70,5 +85,9 @@ public final class ViewData {
             copy.add(MatrixOperations.copy(brick));
         }
         return copy;
+    }
+    
+    public int[][] getHeldBrickData() {
+        return heldBrickData != null ? MatrixOperations.copy(heldBrickData) : null;
     }
 }

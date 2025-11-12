@@ -114,6 +114,16 @@ public class GameController implements InputEventListener {
     }
 
     @Override
+    public ViewData onHoldEvent() {
+        boolean success = board.holdBrick();
+        if (success) {
+            return board.getViewData();
+        }
+        // If hold failed (already held this turn), return current view data
+        return board.getViewData();
+    }
+
+    @Override
     public void createNewGame() {
         board.newGame();
         viewGuiController.refreshGameBackground(board.getBoardMatrix());

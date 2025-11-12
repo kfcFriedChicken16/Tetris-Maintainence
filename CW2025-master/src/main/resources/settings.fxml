@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.media.MediaView?>
+<?import javafx.scene.text.Font?>
+<?import java.net.URL?>
+
+<StackPane fx:controller="com.comp2042.SettingsController" xmlns:fx="http://javafx.com/fxml" styleClass="menu-background">
+    
+    <!-- Video Background (Full Screen) -->
+    <MediaView fx:id="backgroundVideo" preserveRatio="false" 
+               StackPane.alignment="CENTER"/>
+    
+    <!-- Dark Overlay -->
+    <Region styleClass="background-overlay"/>
+    
+    <!-- Main Content -->
+    <VBox alignment="CENTER" spacing="20" style="-fx-padding: 20;">
+        <VBox alignment="CENTER" spacing="20" prefWidth="800" maxWidth="900"
+              style="-fx-background-color: rgba(0, 0, 0, 0.7); -fx-background-radius: 15; -fx-padding: 30;">
+            
+            <!-- Title -->
+            <Label text="SETTINGS" styleClass="game-title" style="-fx-font-size: 48px;">
+                <font>
+                    <Font name="Arial Bold" size="48"/>
+                </font>
+            </Label>
+            
+            <!-- Success Message Label (initially hidden) -->
+            <Label fx:id="successMessageLabel" text="" styleClass="success-message" visible="false" managed="false">
+                <font>
+                    <Font name="Arial Bold" size="16"/>
+                </font>
+            </Label>
+            
+            <!-- Key Bindings Section -->
+            <VBox spacing="15" alignment="CENTER" style="-fx-padding: 20;" prefWidth="750">
+                <Label text="KEY BINDINGS" styleClass="section-title">
+                    <font>
+                        <Font name="Arial Bold" size="24"/>
+                    </font>
+                </Label>
+                
+                <GridPane hgap="20" vgap="15" alignment="CENTER" prefWidth="700" gridLinesVisible="false">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="180" prefWidth="200" maxWidth="220" halignment="RIGHT" hgrow="NEVER"/>
+                        <ColumnConstraints minWidth="140" prefWidth="150" maxWidth="170" halignment="CENTER" hgrow="NEVER"/>
+                        <ColumnConstraints minWidth="140" prefWidth="150" maxWidth="170" halignment="CENTER" hgrow="NEVER"/>
+                    </columnConstraints>
+                    <rowConstraints>
+                        <RowConstraints minHeight="40" prefHeight="45" vgrow="NEVER"/>
+                        <RowConstraints minHeight="40" prefHeight="45" vgrow="NEVER"/>
+                        <RowConstraints minHeight="40" prefHeight="45" vgrow="NEVER"/>
+                        <RowConstraints minHeight="40" prefHeight="45" vgrow="NEVER"/>
+                        <RowConstraints minHeight="40" prefHeight="45" vgrow="NEVER"/>
+                        <RowConstraints minHeight="40" prefHeight="45" vgrow="NEVER"/>
+                        <RowConstraints minHeight="40" prefHeight="45" vgrow="NEVER"/>
+                        <RowConstraints minHeight="40" prefHeight="45" vgrow="NEVER"/>
+                    </rowConstraints>
+                    
+                    <!-- Row 1: Move Left -->
+                    <Label text="Move Left:" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="setting-label"/>
+                    <Button fx:id="moveLeftBtn" text="LEFT" GridPane.columnIndex="1" GridPane.rowIndex="0" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
+                    <Button fx:id="moveLeftAltBtn" text="A" GridPane.columnIndex="2" GridPane.rowIndex="0" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
+                    
+                    <!-- Row 2: Move Right -->
+                    <Label text="Move Right:" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="setting-label"/>
+                    <Button fx:id="moveRightBtn" text="RIGHT" GridPane.columnIndex="1" GridPane.rowIndex="1" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
+                    <Button fx:id="moveRightAltBtn" text="D" GridPane.columnIndex="2" GridPane.rowIndex="1" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
+                    
+                    <!-- Row 3: Move Down -->
+                    <Label text="Move Down:" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="setting-label"/>
+                    <Button fx:id="moveDownBtn" text="DOWN" GridPane.columnIndex="1" GridPane.rowIndex="2" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
+                    <Button fx:id="moveDownAltBtn" text="S" GridPane.columnIndex="2" GridPane.rowIndex="2" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
+                    
+                    <!-- Row 4: Rotate -->
+                    <Label text="Rotate:" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="setting-label"/>
+                    <Button fx:id="rotateBtn" text="UP" GridPane.columnIndex="1" GridPane.rowIndex="3" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
+                    <Button fx:id="rotateAltBtn" text="W" GridPane.columnIndex="2" GridPane.rowIndex="3" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
+                    
+                    <!-- Row 5: Hard Drop -->
+                    <Label text="Hard Drop:" GridPane.columnIndex="0" GridPane.rowIndex="4" styleClass="setting-label"/>
+                    <Button fx:id="hardDropBtn" text="SPACE" GridPane.columnIndex="1" GridPane.rowIndex="4" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
+                    <Label text="" GridPane.columnIndex="2" GridPane.rowIndex="4"/>
+                    
+                    <!-- Row 6: Hold -->
+                    <Label text="Hold:" GridPane.columnIndex="0" GridPane.rowIndex="5" styleClass="setting-label"/>
+                    <Button fx:id="holdBtn" text="C" GridPane.columnIndex="1" GridPane.rowIndex="5" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
+                    <Button fx:id="holdAltBtn" text="SHIFT" GridPane.columnIndex="2" GridPane.rowIndex="5" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
+                    
+                    <!-- Row 7: Pause -->
+                    <Label text="Pause:" GridPane.columnIndex="0" GridPane.rowIndex="6" styleClass="setting-label"/>
+                    <Button fx:id="pauseBtn" text="ESC" GridPane.columnIndex="1" GridPane.rowIndex="6" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
+                    <Label text="" GridPane.columnIndex="2" GridPane.rowIndex="6"/>
+                    
+                    <!-- Row 8: Restart -->
+                    <Label text="Restart:" GridPane.columnIndex="0" GridPane.rowIndex="7" styleClass="setting-label"/>
+                    <Button fx:id="restartBtn" text="N" GridPane.columnIndex="1" GridPane.rowIndex="7" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
+                    <Label text="" GridPane.columnIndex="2" GridPane.rowIndex="7"/>
+                </GridPane>
+            </VBox>
+            
+            <!-- Action Buttons -->
+            <HBox spacing="20" alignment="CENTER" style="-fx-padding: 20;">
+                <Button fx:id="saveBtn" text="SAVE" onAction="#saveSettings" styleClass="menu-button" prefWidth="150">
+                    <font>
+                        <Font name="Arial Bold" size="16"/>
+                    </font>
+                </Button>
+                <Button fx:id="resetBtn" text="RESET TO DEFAULTS" onAction="#resetToDefaults" styleClass="menu-button" prefWidth="200">
+                    <font>
+                        <Font name="Arial Bold" size="16"/>
+                    </font>
+                </Button>
+                <Button fx:id="backBtn" text="BACK" onAction="#backToMenu" styleClass="menu-button-exit" prefWidth="150">
+                    <font>
+                        <Font name="Arial Bold" size="16"/>
+                    </font>
+                </Button>
+            </HBox>
+            
+        </VBox>
+    </VBox>
+    
+    <!-- Stylesheets -->
+    <stylesheets>
+        <URL value="@menuStyle.css"/>
+    </stylesheets>
+</StackPane>
+

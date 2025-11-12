@@ -58,6 +58,12 @@ public class GuiController implements Initializable {
 
     @FXML
     private GameOverPanel gameOverPanel;
+    
+    @FXML
+    private PausePanel pausePanel;
+    
+    @FXML
+    private Group pauseGroup;
 
     @FXML
     private BorderPane gameBoard;
@@ -106,6 +112,12 @@ public class GuiController implements Initializable {
     
     @FXML
     private javafx.scene.layout.VBox nextPanelVBox; // The container VBox from FXML
+    
+    @FXML
+    private javafx.scene.layout.VBox holdPieceContainer;
+    
+    @FXML
+    private javafx.scene.layout.VBox holdPanelVBox; // The container VBox for hold panel
     
     @FXML
     private MediaView gameplayBackgroundVideo;
@@ -193,53 +205,85 @@ public class GuiController implements Initializable {
         gamePanel.setOnKeyPressed(new EventHandler<KeyEvent>() {
             @Override
             public void handle(KeyEvent keyEvent) {
+                SettingsManager settings = SettingsManager.getInstance();
+                KeyCode keyCode = keyEvent.getCode();
+                
                 // Game over controls - check FIRST before normal game controls
                 if (isGameOver.getValue() == Boolean.TRUE) {
-                    if (keyEvent.getCode() == KeyCode.SPACE) {
+                    if (keyCode == KeyCode.SPACE) {
                         // Press Space to restart game
                         newGame(null);
                         keyEvent.consume();
                         return;
-                    } else if (keyEvent.getCode() == KeyCode.ESCAPE) {
-                        // Press ESC to return to main menu
+                    } else if (keyCode == settings.getPause()) {
+                        // Press pause key to return to main menu
                         backToMenu(null);
                         keyEvent.consume();
                         return;
                     }
                 }
                 
+                // Pause key toggles pause (only when not game over)
+                if (keyCode == settings.getPause() && isGameOver.getValue() == Boolean.FALSE) {
+                    togglePause();
+                    keyEvent.consume();
+                    return;
+                }
+                
                 // Normal game controls (only when not paused and not game over)
                 if (isPause.getValue() == Boolean.FALSE && isGameOver.getValue() == Boolean.FALSE) {
-                    if (keyEvent.getCode() == KeyCode.LEFT || keyEvent.getCode() == KeyCode.A) {
+                    // Move left
+                    if (keyCode == settings.getMoveLeft() || keyCode == settings.getMoveLeftAlt()) {
                         refreshBrick(eventListener.onLeftEvent(new MoveEvent(EventType.LEFT, EventSource.USER)));
                         keyEvent.consume();
                     }
-                    if (keyEvent.getCode() == KeyCode.RIGHT || keyEvent.getCode() == KeyCode.D) {
+                    // Move right
+                    if (keyCode == settings.getMoveRight() || keyCode == settings.getMoveRightAlt()) {
                         refreshBrick(eventListener.onRightEvent(new MoveEvent(EventType.RIGHT, EventSource.USER)));
                         keyEvent.consume();
                     }
-                    if (keyEvent.getCode() == KeyCode.UP || keyEvent.getCode() == KeyCode.W) {
+                    // Rotate
+                    if (keyCode == settings.getRotate() || keyCode == settings.getRotateAlt()) {
                         refreshBrick(eventListener.onRotateEvent(new MoveEvent(EventType.ROTATE, EventSource.USER)));
                         keyEvent.consume();
                     }
-                    if (keyEvent.getCode() == KeyCode.DOWN || keyEvent.getCode() == KeyCode.S) {
+                    // Move down
+                    if (keyCode == settings.getMoveDown() || keyCode == settings.getMoveDownAlt()) {
                         moveDown(new MoveEvent(EventType.DOWN, EventSource.USER));
                         keyEvent.consume();
                     }
-                    if (keyEvent.getCode() == KeyCode.SPACE) {
+                    // Hard drop
+                    if (keyCode == settings.getHardDrop()) {
                         hardDrop(new MoveEvent(EventType.HARD_DROP, EventSource.USER));
+                        keyEvent.consume();
+                    }
+                    // Hold piece
+                    if (keyCode == settings.getHold() || keyCode == settings.getHoldAlt()) {
+                        ViewData newViewData = eventListener.onHoldEvent();
+                        refreshBrick(newViewData);
                         keyEvent.consume();
                     }
                 }
                 
-                // N key always restarts (for quick restart during gameplay)
-                if (keyEvent.getCode() == KeyCode.N && isGameOver.getValue() == Boolean.FALSE) {
+                // Restart key (for quick restart during gameplay)
+                if (keyCode == settings.getRestart() && isGameOver.getValue() == Boolean.FALSE) {
                     newGame(null);
                     keyEvent.consume();
                 }
             }
         });
         gameOverPanel.setVisible(false);
+        
+        // Initialize pause panel
+        if (pausePanel != null && pauseGroup != null) {
+            pauseGroup.setVisible(false);
+            pauseGroup.setManaged(false);
+            
+            // Set up button actions
+            pausePanel.getContinueButton().setOnAction(e -> continueGame(null));
+            pausePanel.getRestartButton().setOnAction(e -> restartFromPause(null));
+            pausePanel.getQuitButton().setOnAction(e -> quitToMainMenuFromPause(null));
+        }
 
         final Reflection reflection = new Reflection();
         reflection.setFraction(0.8);
@@ -256,16 +300,27 @@ public class GuiController implements Initializable {
         Pane root = (Pane) parent;
 
         // Move the 3 nodes as a single unit (gameBoard, brickPanel, ghostPanel)
-        // groupNotification is handled separately to center on entire screen
+        // groupNotification and pauseGroup are handled separately to center on entire screen
         Group gameCluster = new Group(gameBoard, brickPanel, ghostPanel);
         gameCluster.setManaged(false);
         brickPanel.setManaged(false);
         ghostPanel.setManaged(false);
         groupNotification.setManaged(false);
+        if (pauseGroup != null) {
+            pauseGroup.setManaged(false);
+        }
 
+        // Remove nodes that need to be repositioned
         root.getChildren().removeAll(gameBoard, brickPanel, ghostPanel, groupNotification);
+        if (pauseGroup != null && root.getChildren().contains(pauseGroup)) {
+            root.getChildren().remove(pauseGroup);
+        }
+        
         root.getChildren().add(gameCluster);
         root.getChildren().add(groupNotification); // Add game over panel separately
+        if (pauseGroup != null) {
+            root.getChildren().add(pauseGroup); // Add pause panel separately
+        }
 
         Platform.runLater(() -> {
             // 1) Freeze board size so it never changes with content
@@ -290,6 +345,17 @@ public class GuiController implements Initializable {
                 
                 // Center game over panel on entire screen (not relative to game board)
                 centerGameOverPanel(root);
+                
+                // Center pause panel on entire screen
+                centerPausePanel(root);
+                
+                // Position HOLD panel relative to game board's left edge
+                if (holdPanelVBox != null) {
+                    double holdPanelX = x - 120; // 120px to the left of game board
+                    double holdPanelY = y; // Align with top of game board
+                    holdPanelVBox.setLayoutX(holdPanelX);
+                    holdPanelVBox.setLayoutY(holdPanelY);
+                }
                 
                 // Position NEXT panel relative to game board's right edge
                 if (nextPanelVBox != null) {
@@ -327,6 +393,27 @@ public class GuiController implements Initializable {
                 double panelX = (root.getWidth() - panelWidth) * 0.5;
                 double panelY = (root.getHeight() - panelHeight) * 0.5;
                 groupNotification.relocate(panelX, panelY);
+            });
+        }
+    }
+    
+    /**
+     * Center the pause panel on the entire screen
+     */
+    private void centerPausePanel(Pane root) {
+        if (pauseGroup != null && root != null) {
+            // Wait for layout to calculate bounds
+            Platform.runLater(() -> {
+                double panelWidth = pauseGroup.getBoundsInLocal().getWidth();
+                double panelHeight = pauseGroup.getBoundsInLocal().getHeight();
+                if (panelWidth <= 0 || panelHeight <= 0) {
+                    // Use preferred size if bounds not calculated yet
+                    panelWidth = 500; // Approximate width
+                    panelHeight = 400; // Approximate height
+                }
+                double panelX = (root.getWidth() - panelWidth) * 0.5;
+                double panelY = (root.getHeight() - panelHeight) * 0.5;
+                pauseGroup.relocate(panelX, panelY);
             });
         }
     }
@@ -373,6 +460,9 @@ public class GuiController implements Initializable {
         
         // Initialize next pieces display
         updateNextPiecesDisplay(brick);
+        
+        // Initialize held piece display
+        updateHeldPieceDisplay(brick);
 
 
         // Determine initial speed based on game mode
@@ -448,6 +538,8 @@ public class GuiController implements Initializable {
             updateGhostPiece(brick);
             // Update next pieces display
             updateNextPiecesDisplay(brick);
+            // Update held piece display
+            updateHeldPieceDisplay(brick);
         }
     }
 
@@ -558,8 +650,97 @@ public class GuiController implements Initializable {
             nextPiecesContainer.getChildren().add(pieceGrid);
         }
     }
+    
+    /**
+     * Update the held piece display
+     */
+    private void updateHeldPieceDisplay(ViewData brick) {
+        if (holdPieceContainer == null) return;
+        
+        // Clear existing held piece
+        holdPieceContainer.getChildren().clear();
+        
+        // Get held piece data
+        int[][] heldPieceData = brick.getHeldBrickData();
+        
+        if (heldPieceData == null) {
+            // Nothing held - show empty container with border
+            holdPieceContainer.getStyleClass().clear();
+            holdPieceContainer.getStyleClass().add("next-pieces-container");
+            return;
+        }
+        
+        // Add single white border style to container
+        holdPieceContainer.getStyleClass().clear();
+        holdPieceContainer.getStyleClass().add("next-pieces-container");
+        
+        // Create grid for held piece
+        GridPane pieceGrid = new GridPane();
+        pieceGrid.setHgap(2);
+        pieceGrid.setVgap(2);
+        pieceGrid.setAlignment(javafx.geometry.Pos.CENTER);
+        
+        // Find the actual bounds of the piece (non-zero cells)
+        int minRow = Integer.MAX_VALUE, maxRow = -1;
+        int minCol = Integer.MAX_VALUE, maxCol = -1;
+        boolean hasCells = false;
+        
+        for (int i = 0; i < heldPieceData.length; i++) {
+            for (int j = 0; j < heldPieceData[i].length; j++) {
+                if (heldPieceData[i][j] != 0) {
+                    hasCells = true;
+                    minRow = Math.min(minRow, i);
+                    maxRow = Math.max(maxRow, i);
+                    minCol = Math.min(minCol, j);
+                    maxCol = Math.max(maxCol, j);
+                }
+            }
+        }
+        
+        if (!hasCells) return;
+        
+        // Create rectangles for this piece
+        for (int i = minRow; i <= maxRow; i++) {
+            for (int j = minCol; j <= maxCol; j++) {
+                if (i < heldPieceData.length && j < heldPieceData[i].length && heldPieceData[i][j] != 0) {
+                    Rectangle rect = new Rectangle(BRICK_SIZE - 2, BRICK_SIZE - 2);
+                    setRectangleData(heldPieceData[i][j], rect);
+                    pieceGrid.add(rect, j - minCol, i - minRow);
+                }
+            }
+        }
+        
+        holdPieceContainer.getChildren().add(pieceGrid);
+        
+        // Set container size to fit piece
+        int pieceWidth = (maxCol - minCol + 1) * BRICK_SIZE + (maxCol - minCol) * 2;
+        int pieceHeight = (maxRow - minRow + 1) * BRICK_SIZE + (maxRow - minRow) * 2;
+        int extraWidth = 20;
+        int extraHeight = 20;
+        holdPieceContainer.setPrefWidth(pieceWidth + extraWidth);
+        holdPieceContainer.setMinWidth(pieceWidth + extraWidth);
+        holdPieceContainer.setMaxWidth(pieceWidth + extraWidth);
+        holdPieceContainer.setPrefHeight(pieceHeight + extraHeight);
+        holdPieceContainer.setMinHeight(pieceHeight + extraHeight);
+        holdPieceContainer.setMaxHeight(pieceHeight + extraHeight);
+    }
 
     private void updateGhostPiece(ViewData brick) {
+        SettingsManager settings = SettingsManager.getInstance();
+        if (!settings.isShowGhostPiece()) {
+            // Hide ghost piece if disabled in settings
+            if (ghostRectangles != null) {
+                for (int i = 0; i < ghostRectangles.length; i++) {
+                    for (int j = 0; j < ghostRectangles[i].length; j++) {
+                        ghostRectangles[i][j].setFill(Color.TRANSPARENT);
+                        ghostRectangles[i][j].setStroke(Color.TRANSPARENT);
+                        ghostRectangles[i][j].setStrokeWidth(0);
+                    }
+                }
+            }
+            return;
+        }
+        
         if (brick.getGhostPosition() != null && ghostRectangles != null) {
             java.awt.Point ghostPos = brick.getGhostPosition();
             java.awt.Point currentPos = new java.awt.Point(brick.getxPosition(), brick.getyPosition());
@@ -1416,6 +1597,122 @@ public class GuiController implements Initializable {
     public void pauseGame(ActionEvent actionEvent) {
         gamePanel.requestFocus();
     }
+    
+    /**
+     * Toggle pause state
+     */
+    private void togglePause() {
+        if (isPause.getValue() == Boolean.FALSE) {
+            // Pause the game
+            pauseGameInternal();
+        } else {
+            // Resume the game
+            continueGame(null);
+        }
+    }
+    
+    /**
+     * Pause the game (internal method)
+     */
+    private void pauseGameInternal() {
+        if (isGameOver.getValue() == Boolean.TRUE) {
+            return; // Don't pause if game is over
+        }
+        
+        isPause.setValue(Boolean.TRUE);
+        
+        // Stop game timeline
+        if (timeLine != null) {
+            timeLine.pause();
+        }
+        
+        // Pause mode-specific timers
+        if (currentGameMode == GameMode.SPRINT && sprintTimer != null) {
+            sprintTimer.pause();
+        } else if (currentGameMode == GameMode.ULTRA && ultraTimer != null) {
+            ultraTimer.pause();
+        }
+        
+        // Show pause panel
+        if (pauseGroup != null) {
+            pauseGroup.setVisible(true);
+            pauseGroup.setManaged(true);
+            
+            // Center the pause panel
+            Parent parent = gameBoard.getParent();
+            if (parent instanceof Pane) {
+                centerPausePanel((Pane) parent);
+            }
+        }
+        
+        gamePanel.requestFocus();
+    }
+    
+    /**
+     * Continue the game from pause
+     */
+    @FXML
+    public void continueGame(ActionEvent actionEvent) {
+        if (isPause.getValue() == Boolean.TRUE) {
+            isPause.setValue(Boolean.FALSE);
+            
+            // Resume game timeline
+            if (timeLine != null) {
+                timeLine.play();
+            }
+            
+            // Resume mode-specific timers
+            if (currentGameMode == GameMode.SPRINT && sprintTimer != null) {
+                sprintTimer.play();
+            } else if (currentGameMode == GameMode.ULTRA && ultraTimer != null) {
+                ultraTimer.play();
+            }
+            
+            // Hide pause panel
+            if (pauseGroup != null) {
+                pauseGroup.setVisible(false);
+                pauseGroup.setManaged(false);
+            }
+            
+            gamePanel.requestFocus();
+        }
+    }
+    
+    /**
+     * Restart the game from pause menu
+     */
+    @FXML
+    public void restartFromPause(ActionEvent actionEvent) {
+        // Hide pause panel first
+        if (pauseGroup != null) {
+            pauseGroup.setVisible(false);
+            pauseGroup.setManaged(false);
+        }
+        
+        // Reset pause state
+        isPause.setValue(Boolean.FALSE);
+        
+        // Restart the game
+        newGame(null);
+    }
+    
+    /**
+     * Quit to main menu from pause menu
+     */
+    @FXML
+    public void quitToMainMenuFromPause(ActionEvent actionEvent) {
+        // Reset pause state
+        isPause.setValue(Boolean.FALSE);
+        
+        // Hide pause panel
+        if (pauseGroup != null) {
+            pauseGroup.setVisible(false);
+            pauseGroup.setManaged(false);
+        }
+        
+        // Go back to main menu
+        backToMenu(null);
+    }
 
     /**
      * Handle Back to Menu button click - Return to the main menu
@@ -1778,6 +2075,10 @@ public class GuiController implements Initializable {
             MediaPlayer soundPlayer = new MediaPlayer(soundMedia);
             soundPlayer.setVolume(0.5); // Set volume to 50%
             
+            // Apply SFX volume from settings
+            SettingsManager settings = SettingsManager.getInstance();
+            soundPlayer.setVolume(settings.getSfxVolume());
+            
             if (variableName.equals("blockLandSound")) {
                 blockLandSound = soundPlayer;
             } else if (variableName.equals("hardDropSound")) {
@@ -1802,7 +2103,8 @@ public class GuiController implements Initializable {
      * Play block landing sound
      */
     private void playBlockLandSound() {
-        if (blockLandSound != null) {
+        SettingsManager settings = SettingsManager.getInstance();
+        if (blockLandSound != null && settings.isSfxEnabled()) {
             // Reset to start if already playing
             blockLandSound.seek(Duration.ZERO);
             blockLandSound.play();
@@ -1813,7 +2115,8 @@ public class GuiController implements Initializable {
      * Play hard drop sound
      */
     private void playHardDropSound() {
-        if (hardDropSound != null) {
+        SettingsManager settings = SettingsManager.getInstance();
+        if (hardDropSound != null && settings.isSfxEnabled()) {
             // Reset to start if already playing
             hardDropSound.seek(Duration.ZERO);
             hardDropSound.play();
@@ -1824,7 +2127,8 @@ public class GuiController implements Initializable {
      * Play line clear success sound
      */
     private void playLineClearSound() {
-        if (lineClearSound != null) {
+        SettingsManager settings = SettingsManager.getInstance();
+        if (lineClearSound != null && settings.isSfxEnabled()) {
             // Reset to start if already playing
             lineClearSound.seek(Duration.ZERO);
             lineClearSound.play();
@@ -1835,7 +2139,8 @@ public class GuiController implements Initializable {
      * Play game over sound
      */
     private void playGameOverSound() {
-        if (gameOverSound != null) {
+        SettingsManager settings = SettingsManager.getInstance();
+        if (gameOverSound != null && settings.isSfxEnabled()) {
             // Reset to start if already playing
             gameOverSound.seek(Duration.ZERO);
             
@@ -1909,8 +2214,9 @@ public class GuiController implements Initializable {
                 gameplayBackgroundMusic = new MediaPlayer(musicMedia);
                 
                 // Set up music properties for seamless looping
+                SettingsManager settings = SettingsManager.getInstance();
                 gameplayBackgroundMusic.setCycleCount(MediaPlayer.INDEFINITE);
-                gameplayBackgroundMusic.setVolume(0.4); // Set volume to 40% (lower than sound effects)
+                gameplayBackgroundMusic.setVolume(settings.getMusicVolume());
                 gameplayBackgroundMusic.setAutoPlay(false); // Start manually
                 
                 // Add event handlers

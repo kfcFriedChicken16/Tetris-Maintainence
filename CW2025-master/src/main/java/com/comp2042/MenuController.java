@@ -751,12 +751,42 @@ public class MenuController implements Initializable {
     }
 
     /**
-     * Handle Settings button click - TODO: Implement settings menu
+     * Handle Settings button click - Open settings menu
      */
     @FXML
     private void openSettings(ActionEvent event) {
-        // TODO: Implement settings menu
-        showInfoAlert("Settings", "Settings menu coming soon!\n\nWill include:\n- Audio controls\n- Key bindings\n- Graphics options\n- Difficulty settings");
+        try {
+            // Stop background video and music
+            if (backgroundVideoPlayer != null) {
+                backgroundVideoPlayer.stop();
+            }
+            if (backgroundMusic != null) {
+                backgroundMusic.stop();
+            }
+            
+            // Load settings page
+            URL location = getClass().getClassLoader().getResource("settings.fxml");
+            FXMLLoader fxmlLoader = new FXMLLoader(location);
+            Parent settingsRoot = fxmlLoader.load();
+            
+            SettingsController settingsController = fxmlLoader.getController();
+            
+            Stage stage = (Stage) settingsBtn.getScene().getWindow();
+            Scene settingsScene = new Scene(settingsRoot, 1200, 800);
+            stage.setScene(settingsScene);
+            stage.setTitle("Tetris - Settings");
+            
+            SettingsManager settingsManager = SettingsManager.getInstance();
+            stage.setFullScreen(settingsManager.isFullscreen());
+            stage.setFullScreenExitHint("Press ESC to exit full screen");
+            
+            settingsController.setPrimaryStage(stage);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("Error opening settings: " + e.getMessage());
+            showInfoAlert("Error", "Could not open settings menu: " + e.getMessage());
+        }
     }
 
     /**

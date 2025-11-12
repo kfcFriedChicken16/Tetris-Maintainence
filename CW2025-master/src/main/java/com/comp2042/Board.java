@@ -25,4 +25,10 @@ public interface Board {
     Score getScore();
 
     void newGame();
+    
+    /**
+     * Hold the current piece and swap with held piece (if any)
+     * @return true if hold was successful, false if hold is not allowed (already held this turn)
+     */
+    boolean holdBrick();
 }

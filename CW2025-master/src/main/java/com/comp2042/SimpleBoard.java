@@ -18,6 +18,8 @@ public class SimpleBoard implements Board {
     private Point currentOffset;
     private final Score score;
     private int totalLinesCleared = 0; // Track total lines cleared for Sprint mode
+    private Brick heldBrick = null; // Currently held piece
+    private boolean canHold = true; // Whether we can hold this turn (prevents multiple holds per piece)
 
     public SimpleBoard(int width, int height) {
         this.width = width;
@@ -125,7 +127,44 @@ public class SimpleBoard implements Board {
         brickRotator.setBrick(currentBrick);
         // Fix: Start at top center (X=4 for center of 10-wide board, Y=0 for top)
         currentOffset = new Point(4, 0);
+        canHold = true; // Reset hold ability when new piece is created
         return MatrixOperations.intersect(currentGameMatrix, brickRotator.getCurrentShape(), (int) currentOffset.getX(), (int) currentOffset.getY());
+    }
+    
+    @Override
+    public boolean holdBrick() {
+        // Can't hold if already held this turn
+        if (!canHold) {
+            return false;
+        }
+        
+        // Get current brick
+        Brick currentBrick = brickRotator.getBrick();
+        
+        if (heldBrick == null) {
+            // Nothing held yet - store current and get next piece
+            heldBrick = currentBrick;
+            Brick nextBrick = brickGenerator.getBrick();
+            brickRotator.setBrick(nextBrick);
+        } else {
+            // Swap current with held
+            Brick temp = heldBrick;
+            heldBrick = currentBrick;
+            brickRotator.setBrick(temp);
+        }
+        
+        // Reset position to top center
+        currentOffset = new Point(4, 0);
+        canHold = false; // Can't hold again until next piece
+        
+        return true;
+    }
+    
+    /**
+     * Get the currently held piece (for display)
+     */
+    public Brick getHeldBrick() {
+        return heldBrick;
     }
 
     @Override
@@ -147,8 +186,14 @@ public class SimpleBoard implements Board {
             }
         }
         
+        // Get held piece data (if any)
+        int[][] heldBrickData = null;
+        if (heldBrick != null) {
+            heldBrickData = heldBrick.getShapeMatrix().get(0);
+        }
+        
         return new ViewData(brickRotator.getCurrentShape(), (int) currentOffset.getX(), (int) currentOffset.getY(), 
-                           brickGenerator.getNextBrick().getShapeMatrix().get(0), nextBricksList, ghostPos);
+                           brickGenerator.getNextBrick().getShapeMatrix().get(0), nextBricksList, ghostPos, heldBrickData);
     }
 
     /**
@@ -212,6 +257,8 @@ public class SimpleBoard implements Board {
         currentGameMatrix = new int[width][height];
         score.reset();
         totalLinesCleared = 0; // Reset lines cleared counter
+        heldBrick = null; // Clear held piece
+        canHold = true; // Reset hold ability
         createNewBrick();
     }
 }
