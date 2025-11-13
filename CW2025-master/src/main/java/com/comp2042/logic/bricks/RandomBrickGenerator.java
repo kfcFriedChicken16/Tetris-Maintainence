@@ -11,10 +11,9 @@ public class RandomBrickGenerator implements BrickGenerator {
     private final List<Brick> brickList;
     private final List<Integer> weights; // Weight for each brick type
     private int totalWeight; // Sum of all weights
-    private int totalWeightWithoutI; // Sum of weights excluding I-piece
 
     private final Deque<Brick> nextBricks = new ArrayDeque<>();
-    private final Deque<Brick> recentPieces = new ArrayDeque<>(); // Track last 2 pieces to prevent 3+ consecutive I-pieces
+    private final Deque<Brick> recentPieces = new ArrayDeque<>(); // Track last 3 pieces to prevent 4+ consecutive of any type
 
     public RandomBrickGenerator() {
         brickList = new ArrayList<>();
@@ -40,8 +39,6 @@ public class RandomBrickGenerator implements BrickGenerator {
         
         // Calculate total weight
         totalWeight = weights.stream().mapToInt(Integer::intValue).sum();
-        // Calculate total weight without I-piece (for when we need to exclude it)
-        totalWeightWithoutI = totalWeight - weights.get(0); // I-piece is at index 0
         
         // Initialize next bricks queue
         nextBricks.add(getWeightedRandomBrick());
@@ -49,39 +46,99 @@ public class RandomBrickGenerator implements BrickGenerator {
     }
     
     /**
-     * Check if the last 2 pieces were I-pieces
+     * Check if a specific brick type has appeared 3 times in a row
+     * @param brickType The class of the brick type to check
+     * @return true if the last 3 pieces are all of this type
      */
-    private boolean hasTwoConsecutiveI() {
-        if (recentPieces.size() < 2) {
+    private boolean hasThreeConsecutive(Class<? extends Brick> brickType) {
+        if (recentPieces.size() < 3) {
             return false;
         }
         Brick[] recent = recentPieces.toArray(new Brick[0]);
-        // Check if last 2 pieces are both I-pieces
-        return recent[recent.length - 1] instanceof IBrick && 
-               recent[recent.length - 2] instanceof IBrick;
+        int lastIndex = recent.length - 1;
+        // Check if last 3 pieces are all of the same type
+        return brickType.isInstance(recent[lastIndex]) && 
+               brickType.isInstance(recent[lastIndex - 1]) &&
+               brickType.isInstance(recent[lastIndex - 2]);
+    }
+    
+    /**
+     * Get the index of a brick type in the brickList
+     * @param brickType The class of the brick type
+     * @return The index, or -1 if not found
+     */
+    private int getBrickTypeIndex(Class<? extends Brick> brickType) {
+        for (int i = 0; i < brickList.size(); i++) {
+            if (brickType.isInstance(brickList.get(i))) {
+                return i;
+            }
+        }
+        return -1;
     }
     
     /**
      * Get a random brick based on weighted probability
-     * I-piece has 20% probability, other pieces ~13.33% each
-     * Prevents more than 2 consecutive I-pieces
+     * I-piece has 20% probability (weight 6), other pieces ~13.33% each (weight 4)
+     * Prevents any block type from appearing 4 times in a row (max 3 consecutive)
+     * 
+     * When a type is excluded (has appeared 3 times), the remaining types maintain
+     * their relative probabilities to each other.
      */
     private Brick getWeightedRandomBrick() {
-        boolean excludeI = hasTwoConsecutiveI();
-        int weightToUse = excludeI ? totalWeightWithoutI : totalWeight;
+        // Find which brick type (if any) has appeared 3 times consecutively
+        // If found, exclude it from this selection to prevent 4 in a row
+        Class<? extends Brick> excludedType = null;
+        for (Brick brick : brickList) {
+            Class<? extends Brick> brickType = brick.getClass();
+            if (hasThreeConsecutive(brickType)) {
+                excludedType = brickType;
+                break;
+            }
+        }
+        
+        // Calculate total weight excluding the blocked type (if any)
+        // This maintains the relative probabilities of remaining types
+        int weightToUse = totalWeight;
+        if (excludedType != null) {
+            int excludedIndex = getBrickTypeIndex(excludedType);
+            if (excludedIndex >= 0) {
+                weightToUse -= weights.get(excludedIndex);
+            }
+        }
+        
+        // Safety check: if weight becomes invalid, use total weight
+        if (weightToUse <= 0) {
+            weightToUse = totalWeight;
+            excludedType = null; // Don't exclude anything if weights are invalid
+        }
+        
+        // Generate random number within the valid weight range
         int random = ThreadLocalRandom.current().nextInt(weightToUse);
         int cumulativeWeight = 0;
-        int startIndex = excludeI ? 1 : 0; // Skip I-piece if excluding
         
-        for (int i = startIndex; i < brickList.size(); i++) {
+        // Select brick based on weighted probability, skipping excluded type
+        for (int i = 0; i < brickList.size(); i++) {
+            // Skip excluded type to prevent 4 in a row
+            if (excludedType != null && excludedType.isInstance(brickList.get(i))) {
+                continue;
+            }
+            
+            // Add this brick's weight to cumulative
             cumulativeWeight += weights.get(i);
             if (random < cumulativeWeight) {
                 return brickList.get(i);
             }
         }
         
-        // Fallback (should never reach here)
-        return brickList.get(excludeI ? 1 : 0);
+        // Fallback: return first non-excluded brick (should rarely be needed)
+        for (int i = 0; i < brickList.size(); i++) {
+            if (excludedType == null || !excludedType.isInstance(brickList.get(i))) {
+                return brickList.get(i);
+            }
+        }
+        
+        // Ultimate fallback (should never reach here)
+        return brickList.get(0);
     }
 
     @Override
@@ -90,9 +147,9 @@ public class RandomBrickGenerator implements BrickGenerator {
             nextBricks.add(getWeightedRandomBrick());
         }
         Brick consumed = nextBricks.poll();
-        // Track consumed piece in recent pieces (keep only last 2)
+        // Track consumed piece in recent pieces (keep only last 3 to prevent 4 in a row)
         recentPieces.add(consumed);
-        if (recentPieces.size() > 2) {
+        if (recentPieces.size() > 3) {
             recentPieces.poll();
         }
         return consumed;

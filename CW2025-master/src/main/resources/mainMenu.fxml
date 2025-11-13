@@ -40,16 +40,7 @@
         <!-- Menu Buttons (Initially Hidden) -->
         <VBox fx:id="menuButtonsContainer" alignment="CENTER" spacing="20" maxWidth="300" visible="false" managed="false">
             
-            <Button fx:id="singlePlayerBtn" text="Single Player" onAction="#showModeSelection" styleClass="menu-button">
-                <font>
-                    <Font name="Arial Bold" size="16"/>
-                </font>
-                <effect>
-                    <Glow level="0.3"/>
-                </effect>
-            </Button>
-            
-            <Button fx:id="multiplayerBtn" text="Local Multiplayer" onAction="#startMultiplayer" styleClass="menu-button">
+            <Button fx:id="singlePlayerBtn" text="Start" onAction="#showModeSelection" styleClass="menu-button">
                 <font>
                     <Font name="Arial Bold" size="16"/>
                 </font>
@@ -59,15 +50,6 @@
             </Button>
             
             <Button fx:id="settingsBtn" text="Settings" onAction="#openSettings" styleClass="menu-button">
-                <font>
-                    <Font name="Arial Bold" size="16"/>
-                </font>
-                <effect>
-                    <Glow level="0.3"/>
-                </effect>
-            </Button>
-            
-            <Button fx:id="highScoresBtn" text="High Scores" onAction="#showHighScores" styleClass="menu-button">
                 <font>
                     <Font name="Arial Bold" size="16"/>
                 </font>
@@ -130,13 +112,6 @@
             </Button>
             
         </VBox>
-        
-        <!-- Version Info -->
-        <Label fx:id="versionLabel" text="Version 2.0 - Enhanced Edition" styleClass="version-info" visible="false" managed="false">
-            <font>
-                <Font name="Arial" size="12"/>
-            </font>
-        </Label>
         
     </VBox>
     

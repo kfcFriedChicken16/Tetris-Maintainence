@@ -31,4 +31,10 @@ public interface Board {
      * @return true if hold was successful, false if hold is not allowed (already held this turn)
      */
     boolean holdBrick();
+    
+    /**
+     * Get the total number of lines cleared (useful for Sprint mode)
+     * @return total lines cleared since game start
+     */
+    int getTotalLinesCleared();
 }

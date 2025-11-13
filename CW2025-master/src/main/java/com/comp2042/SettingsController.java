@@ -26,12 +26,12 @@ import java.util.ResourceBundle;
 public class SettingsController implements Initializable {
     
     @FXML private MediaView backgroundVideo;
-    @FXML private Button moveLeftBtn, moveLeftAltBtn;
-    @FXML private Button moveRightBtn, moveRightAltBtn;
-    @FXML private Button moveDownBtn, moveDownAltBtn;
-    @FXML private Button rotateBtn, rotateAltBtn;
+    @FXML private Button moveLeftBtn;
+    @FXML private Button moveRightBtn;
+    @FXML private Button moveDownBtn;
+    @FXML private Button rotateBtn;
     @FXML private Button hardDropBtn;
-    @FXML private Button holdBtn, holdAltBtn;
+    @FXML private Button holdBtn;
     @FXML private Button pauseBtn;
     @FXML private Button restartBtn;
     @FXML private Button saveBtn, resetBtn, backBtn;
@@ -227,16 +227,11 @@ public class SettingsController implements Initializable {
     private void loadSettingsToUI() {
         // Load key bindings (with formatted names)
         moveLeftBtn.setText(formatKeyName(settingsManager.getMoveLeft()));
-        moveLeftAltBtn.setText(formatKeyName(settingsManager.getMoveLeftAlt()));
         moveRightBtn.setText(formatKeyName(settingsManager.getMoveRight()));
-        moveRightAltBtn.setText(formatKeyName(settingsManager.getMoveRightAlt()));
         moveDownBtn.setText(formatKeyName(settingsManager.getMoveDown()));
-        moveDownAltBtn.setText(formatKeyName(settingsManager.getMoveDownAlt()));
         rotateBtn.setText(formatKeyName(settingsManager.getRotate()));
-        rotateAltBtn.setText(formatKeyName(settingsManager.getRotateAlt()));
         hardDropBtn.setText(formatKeyName(settingsManager.getHardDrop()));
         holdBtn.setText(formatKeyName(settingsManager.getHold()));
-        holdAltBtn.setText(formatKeyName(settingsManager.getHoldAlt()));
         pauseBtn.setText(formatKeyName(settingsManager.getPause()));
         restartBtn.setText(formatKeyName(settingsManager.getRestart()));
         
@@ -303,26 +298,16 @@ public class SettingsController implements Initializable {
         // Update settings based on which button was pressed
         if (currentKeyBindingButton == moveLeftBtn) {
             settingsManager.setMoveLeft(keyCode);
-        } else if (currentKeyBindingButton == moveLeftAltBtn) {
-            settingsManager.setMoveLeftAlt(keyCode);
         } else if (currentKeyBindingButton == moveRightBtn) {
             settingsManager.setMoveRight(keyCode);
-        } else if (currentKeyBindingButton == moveRightAltBtn) {
-            settingsManager.setMoveRightAlt(keyCode);
         } else if (currentKeyBindingButton == moveDownBtn) {
             settingsManager.setMoveDown(keyCode);
-        } else if (currentKeyBindingButton == moveDownAltBtn) {
-            settingsManager.setMoveDownAlt(keyCode);
         } else if (currentKeyBindingButton == rotateBtn) {
             settingsManager.setRotate(keyCode);
-        } else if (currentKeyBindingButton == rotateAltBtn) {
-            settingsManager.setRotateAlt(keyCode);
         } else if (currentKeyBindingButton == hardDropBtn) {
             settingsManager.setHardDrop(keyCode);
         } else if (currentKeyBindingButton == holdBtn) {
             settingsManager.setHold(keyCode);
-        } else if (currentKeyBindingButton == holdAltBtn) {
-            settingsManager.setHoldAlt(keyCode);
         } else if (currentKeyBindingButton == pauseBtn) {
             settingsManager.setPause(keyCode);
         } else if (currentKeyBindingButton == restartBtn) {
@@ -338,16 +323,11 @@ public class SettingsController implements Initializable {
     
     private String getCurrentKeyForButton(Button button) {
         if (button == moveLeftBtn) return formatKeyName(settingsManager.getMoveLeft());
-        if (button == moveLeftAltBtn) return formatKeyName(settingsManager.getMoveLeftAlt());
         if (button == moveRightBtn) return formatKeyName(settingsManager.getMoveRight());
-        if (button == moveRightAltBtn) return formatKeyName(settingsManager.getMoveRightAlt());
         if (button == moveDownBtn) return formatKeyName(settingsManager.getMoveDown());
-        if (button == moveDownAltBtn) return formatKeyName(settingsManager.getMoveDownAlt());
         if (button == rotateBtn) return formatKeyName(settingsManager.getRotate());
-        if (button == rotateAltBtn) return formatKeyName(settingsManager.getRotateAlt());
         if (button == hardDropBtn) return formatKeyName(settingsManager.getHardDrop());
         if (button == holdBtn) return formatKeyName(settingsManager.getHold());
-        if (button == holdAltBtn) return formatKeyName(settingsManager.getHoldAlt());
         if (button == pauseBtn) return formatKeyName(settingsManager.getPause());
         if (button == restartBtn) return formatKeyName(settingsManager.getRestart());
         return "";
@@ -443,7 +423,8 @@ public class SettingsController implements Initializable {
             stage.setScene(menuScene);
             stage.setTitle("Tetris - Enhanced Edition");
             stage.setFullScreen(settingsManager.isFullscreen());
-            stage.setFullScreenExitHint("Press ESC to exit full screen");
+            stage.setFullScreenExitKeyCombination(null);
+            stage.setFullScreenExitHint("");
             
             menuController.setPrimaryStage(stage);
             

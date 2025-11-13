@@ -116,7 +116,8 @@ public class MainMenu extends MenuBase implements MenuInterface {
         // Enable full screen mode
         if (FULL_SCREEN) {
             primaryStage.setFullScreen(true);
-            primaryStage.setFullScreenExitHint("Press ESC to exit full screen");
+            primaryStage.setFullScreenExitKeyCombination(null);
+            primaryStage.setFullScreenExitHint("");
             primaryStage.setMaximized(true);
         }
     }

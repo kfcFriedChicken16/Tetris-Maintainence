@@ -3,11 +3,8 @@ package com.comp2042;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
-import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
@@ -28,15 +25,8 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import javafx.scene.media.Media;
-import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.PrintWriter;
 import java.net.URL;
 import java.util.ResourceBundle;
 
@@ -125,16 +115,9 @@ public class GuiController implements Initializable {
     @FXML
     private Region gameplayVideoOverlay;
 
-    private MediaPlayer gameplayVideoPlayer;
+    // Video is now managed by VideoManager
     
-    // Sound effects
-    private MediaPlayer blockLandSound;
-    private MediaPlayer hardDropSound;
-    private MediaPlayer lineClearSound;
-    private MediaPlayer gameOverSound;
-    
-    // Background music
-    private MediaPlayer gameplayBackgroundMusic;
+    // Audio is now managed by AudioManager
 
     private Rectangle[][] displayMatrix;
 
@@ -149,16 +132,12 @@ public class GuiController implements Initializable {
     // Sprint mode timer
     private Timeline sprintTimer;
     private long sprintStartTime = 0;
-    private static long sprintBestTime = Long.MAX_VALUE; // Best time in milliseconds
-    private static final String SPRINT_BEST_TIME_FILE = "sprint_best_time.txt";
     
     // Ultra mode variables
     private Timeline ultraTimer;
     private long ultraStartTime = 0;
     private int ultraSpeedLevel = 1; // Current speed level (starts at 1)
     private long currentSpeedInterval = 400; // Current speed in milliseconds (starts at 400ms)
-    private static int ultraBestScore = 0; // Best score achieved in Ultra mode
-    private static final String ULTRA_BEST_SCORE_FILE = "ultra_best_score.txt";
     private static final long ULTRA_TIME_LIMIT = 120000; // 2 minutes in milliseconds
     private static final long ULTRA_SPEED_INCREASE_INTERVAL = 20000; // 20 seconds in milliseconds
     
@@ -166,17 +145,19 @@ public class GuiController implements Initializable {
     private int survivalSpeedLevel = 1; // Current speed level (starts at 1)
     private long survivalSpeedInterval = 400; // Current speed in milliseconds (starts at 400ms)
     private int survivalNextThreshold = 1500; // Next score threshold for speed increase
-    private static int survivalHighestLevel = 1; // Highest level reached in Survival mode
-    private static final String SURVIVAL_HIGHEST_LEVEL_FILE = "survival_highest_level.txt";
     private static final int SURVIVAL_SPEED_INCREASE_THRESHOLD = 1500; // Points needed for each speed increase
 
-    private final BooleanProperty isPause = new SimpleBooleanProperty();
-
-    private final BooleanProperty isGameOver = new SimpleBooleanProperty();
+    // Game state management - handles pause and game over state
+    private GameStateManager gameStateManager;
     
-    // Highest score (persists across games)
-    private static int highestScore = 0;
-    private static final String HIGHEST_SCORE_FILE = "highest_score.txt";
+    // Score management - handles all score persistence
+    private ScoreManager scoreManager;
+    
+    // Audio management - handles all sound effects and background music
+    private AudioManager audioManager;
+    
+    // Video management - handles background video and vignette effects
+    private VideoManager videoManager;
     
     // Current game mode
     private GameMode currentGameMode = GameMode.CLASSIC;
@@ -185,93 +166,25 @@ public class GuiController implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         Font.loadFont(getClass().getClassLoader().getResource("digital.ttf").toExternalForm(), 38);
         
-        // Load highest score from file on startup
-        loadHighestScore();
+        // Initialize score manager
+        scoreManager = new ScoreManager();
+        scoreManager.setLabels(highestScoreLabel, sprintBestTimeLabel, 
+                              ultraBestScoreLabel, survivalHighestLevelLabel);
         
-        // Initialize background video
-        initializeGameplayBackgroundVideo();
+        // Initialize audio manager
+        audioManager = new AudioManager();
         
-        // Setup vignette effect (bright center, darker edges)
-        setupVignetteEffect();
+        // Initialize video manager
+        videoManager = new VideoManager(gameplayBackgroundVideo, gameplayVideoOverlay);
+        videoManager.initializeBackgroundVideo();
+        videoManager.setupVignetteEffect();
         
-        // Initialize sound effects
-        initializeSoundEffects();
-        
-        // Initialize and start background music
-        initializeGameplayBackgroundMusic();
+        // Initialize game state manager
+        gameStateManager = new GameStateManager();
         
         gamePanel.setFocusTraversable(true);
         gamePanel.requestFocus();
-        gamePanel.setOnKeyPressed(new EventHandler<KeyEvent>() {
-            @Override
-            public void handle(KeyEvent keyEvent) {
-                SettingsManager settings = SettingsManager.getInstance();
-                KeyCode keyCode = keyEvent.getCode();
-                
-                // Game over controls - check FIRST before normal game controls
-                if (isGameOver.getValue() == Boolean.TRUE) {
-                    if (keyCode == KeyCode.SPACE) {
-                        // Press Space to restart game
-                        newGame(null);
-                        keyEvent.consume();
-                        return;
-                    } else if (keyCode == settings.getPause()) {
-                        // Press pause key to return to main menu
-                        backToMenu(null);
-                        keyEvent.consume();
-                        return;
-                    }
-                }
-                
-                // Pause key toggles pause (only when not game over)
-                if (keyCode == settings.getPause() && isGameOver.getValue() == Boolean.FALSE) {
-                    togglePause();
-                    keyEvent.consume();
-                    return;
-                }
-                
-                // Normal game controls (only when not paused and not game over)
-                if (isPause.getValue() == Boolean.FALSE && isGameOver.getValue() == Boolean.FALSE) {
-                    // Move left
-                    if (keyCode == settings.getMoveLeft() || keyCode == settings.getMoveLeftAlt()) {
-                        refreshBrick(eventListener.onLeftEvent(new MoveEvent(EventType.LEFT, EventSource.USER)));
-                        keyEvent.consume();
-                    }
-                    // Move right
-                    if (keyCode == settings.getMoveRight() || keyCode == settings.getMoveRightAlt()) {
-                        refreshBrick(eventListener.onRightEvent(new MoveEvent(EventType.RIGHT, EventSource.USER)));
-                        keyEvent.consume();
-                    }
-                    // Rotate
-                    if (keyCode == settings.getRotate() || keyCode == settings.getRotateAlt()) {
-                        refreshBrick(eventListener.onRotateEvent(new MoveEvent(EventType.ROTATE, EventSource.USER)));
-                        keyEvent.consume();
-                    }
-                    // Move down
-                    if (keyCode == settings.getMoveDown() || keyCode == settings.getMoveDownAlt()) {
-                        moveDown(new MoveEvent(EventType.DOWN, EventSource.USER));
-                        keyEvent.consume();
-                    }
-                    // Hard drop
-                    if (keyCode == settings.getHardDrop()) {
-                        hardDrop(new MoveEvent(EventType.HARD_DROP, EventSource.USER));
-                        keyEvent.consume();
-                    }
-                    // Hold piece
-                    if (keyCode == settings.getHold() || keyCode == settings.getHoldAlt()) {
-                        ViewData newViewData = eventListener.onHoldEvent();
-                        refreshBrick(newViewData);
-                        keyEvent.consume();
-                    }
-                }
-                
-                // Restart key (for quick restart during gameplay)
-                if (keyCode == settings.getRestart() && isGameOver.getValue() == Boolean.FALSE) {
-                    newGame(null);
-                    keyEvent.consume();
-                }
-            }
-        });
+        gamePanel.setOnKeyPressed(this::handleKeyPressed);
         gameOverPanel.setVisible(false);
         
         // Initialize pause panel
@@ -465,22 +378,8 @@ public class GuiController implements Initializable {
         updateHeldPieceDisplay(brick);
 
 
-        // Determine initial speed based on game mode
-        long initialSpeed = 400; // Default for Classic mode
-        if (currentGameMode == GameMode.SPRINT) {
-            initialSpeed = 400; // Sprint mode: fixed 400ms
-        } else if (currentGameMode == GameMode.ULTRA) {
-            initialSpeed = currentSpeedInterval; // Ultra mode: starts at 400ms
-        } else if (currentGameMode == GameMode.SURVIVAL) {
-            initialSpeed = survivalSpeedInterval; // Survival mode: starts at 400ms, increases with score
-        }
-        
-        timeLine = new Timeline(new KeyFrame(
-                Duration.millis(initialSpeed),
-                ae -> moveDown(new MoveEvent(EventType.DOWN, EventSource.THREAD))
-        ));
-        timeLine.setCycleCount(Timeline.INDEFINITE);
-        timeLine.play();
+        // Create and start game timeline with appropriate speed for current mode
+        createAndStartGameTimeline(getInitialSpeedForMode());
         
         // Start mode-specific timers
         if (currentGameMode == GameMode.SPRINT) {
@@ -526,7 +425,7 @@ public class GuiController implements Initializable {
 
 
     private void refreshBrick(ViewData brick) {
-        if (isPause.getValue() == Boolean.FALSE) {
+        if (!gameStateManager.isPaused()) {
             brickPanel.setLayoutX(gamePanel.getLayoutX() + brick.getxPosition() * brickPanel.getVgap() + brick.getxPosition() * BRICK_SIZE);
             brickPanel.setLayoutY(-42 + gamePanel.getLayoutY() + brick.getyPosition() * brickPanel.getHgap() + brick.getyPosition() * BRICK_SIZE);
             for (int i = 0; i < brick.getBrickData().length; i++) {
@@ -804,7 +703,7 @@ public class GuiController implements Initializable {
 
     private void moveDown(MoveEvent event) {
         // Don't move if game is paused or game over
-        if (isPause.getValue() == Boolean.FALSE && isGameOver.getValue() == Boolean.FALSE) {
+        if (!gameStateManager.isPaused() && !gameStateManager.isGameOver()) {
             // Additional check for Ultra mode: stop if time is up
             if (currentGameMode == GameMode.ULTRA && ultraStartTime > 0) {
                 long elapsed = System.currentTimeMillis() - ultraStartTime;
@@ -813,7 +712,7 @@ public class GuiController implements Initializable {
                     if (timeLine != null) {
                         timeLine.stop();
                     }
-                    isGameOver.setValue(true);
+                    gameStateManager.setGameOver(true);
                     Platform.runLater(() -> {
                         ultraComplete();
                     });
@@ -825,11 +724,11 @@ public class GuiController implements Initializable {
             
             // Play sound when block lands (when clearRow is not null, it means block was merged)
             if (downData.getClearRow() != null) {
-                playBlockLandSound();
+                audioManager.playBlockLandSound();
                 
                 if (downData.getClearRow().getLinesRemoved() > 0) {
                     // Play line clear success sound
-                    playLineClearSound();
+                    audioManager.playLineClearSound();
                     
                     NotificationPanel notificationPanel = new NotificationPanel("+" + downData.getClearRow().getScoreBonus());
                     groupNotification.getChildren().add(notificationPanel);
@@ -844,19 +743,19 @@ public class GuiController implements Initializable {
     }
 
     private void hardDrop(MoveEvent event) {
-        if (isPause.getValue() == Boolean.FALSE) {
+        if (!gameStateManager.isPaused()) {
             // Play hard drop sound immediately when space is pressed
-            playHardDropSound();
+            audioManager.playHardDropSound();
             
             DownData downData = eventListener.onHardDropEvent(event);
             
             // Also play land sound since block lands immediately after hard drop
             if (downData.getClearRow() != null) {
-                playBlockLandSound();
+                audioManager.playBlockLandSound();
                 
                 if (downData.getClearRow().getLinesRemoved() > 0) {
                     // Play line clear success sound
-                    playLineClearSound();
+                    audioManager.playLineClearSound();
                     
                     NotificationPanel notificationPanel = new NotificationPanel("+" + downData.getClearRow().getScoreBonus());
                     groupNotification.getChildren().add(notificationPanel);
@@ -881,64 +780,13 @@ public class GuiController implements Initializable {
         // Listen to score changes to update highest score
         integerProperty.addListener((obs, oldVal, newVal) -> {
             int currentScore = newVal.intValue();
-            if (currentScore > highestScore) {
-                highestScore = currentScore;
-                updateHighestScoreDisplay();
-                saveHighestScore(); // Save to file whenever highest score is updated
-            }
+            scoreManager.updateHighestScore(currentScore);
             
             // Check Survival mode speed increase (every 1500 points)
             if (currentGameMode == GameMode.SURVIVAL) {
                 checkSurvivalSpeedIncrease(currentScore);
             }
         });
-        
-        // Initialize highest score display
-        updateHighestScoreDisplay();
-    }
-    
-    private void updateHighestScoreDisplay() {
-        if (highestScoreLabel != null) {
-            highestScoreLabel.setText(String.valueOf(highestScore));
-        }
-    }
-    
-    /**
-     * Load highest score from file on application startup
-     */
-    private void loadHighestScore() {
-        try {
-            File scoreFile = new File(HIGHEST_SCORE_FILE);
-            if (scoreFile.exists() && scoreFile.canRead()) {
-                try (BufferedReader reader = new BufferedReader(new FileReader(scoreFile))) {
-                    String line = reader.readLine();
-                    if (line != null && !line.trim().isEmpty()) {
-                        highestScore = Integer.parseInt(line.trim());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            // If file doesn't exist or can't be read, start with 0
-            System.out.println("Could not load highest score: " + e.getMessage());
-            highestScore = 0;
-        }
-        
-        // Update display with loaded score
-        Platform.runLater(() -> updateHighestScoreDisplay());
-    }
-    
-    /**
-     * Save highest score to file whenever it's updated
-     */
-    private void saveHighestScore() {
-        try {
-            File scoreFile = new File(HIGHEST_SCORE_FILE);
-            try (PrintWriter writer = new PrintWriter(new FileWriter(scoreFile))) {
-                writer.println(highestScore);
-            }
-        } catch (Exception e) {
-            System.out.println("Could not save highest score: " + e.getMessage());
-        }
     }
     
     /**
@@ -948,59 +796,19 @@ public class GuiController implements Initializable {
         currentGameMode = mode;
         System.out.println("Game mode set to: " + mode.getDisplayName());
         
-        // Show/hide mode-specific UI
-        if (mode == GameMode.SPRINT) {
-            if (sprintModeDisplay != null) {
-                sprintModeDisplay.setVisible(true);
-                sprintModeDisplay.setManaged(true);
-            }
-            if (ultraModeDisplay != null) {
-                ultraModeDisplay.setVisible(false);
-                ultraModeDisplay.setManaged(false);
-            }
-            loadSprintBestTime();
-            updateSprintBestTimeDisplay();
-        } else if (mode == GameMode.ULTRA) {
-            if (ultraModeDisplay != null) {
-                ultraModeDisplay.setVisible(true);
-                ultraModeDisplay.setManaged(true);
-            }
-            if (sprintModeDisplay != null) {
-                sprintModeDisplay.setVisible(false);
-                sprintModeDisplay.setManaged(false);
-            }
-            if (survivalModeDisplay != null) {
-                survivalModeDisplay.setVisible(false);
-                survivalModeDisplay.setManaged(false);
-            }
-            loadUltraBestScore();
-        } else if (mode == GameMode.SURVIVAL) {
-            if (survivalModeDisplay != null) {
-                survivalModeDisplay.setVisible(true);
-                survivalModeDisplay.setManaged(true);
-            }
-            if (sprintModeDisplay != null) {
-                sprintModeDisplay.setVisible(false);
-                sprintModeDisplay.setManaged(false);
-            }
-            if (ultraModeDisplay != null) {
-                ultraModeDisplay.setVisible(false);
-                ultraModeDisplay.setManaged(false);
-            }
-            loadSurvivalHighestLevel();
-        } else {
-            if (sprintModeDisplay != null) {
-                sprintModeDisplay.setVisible(false);
-                sprintModeDisplay.setManaged(false);
-            }
-            if (ultraModeDisplay != null) {
-                ultraModeDisplay.setVisible(false);
-                ultraModeDisplay.setManaged(false);
-            }
-            if (survivalModeDisplay != null) {
-                survivalModeDisplay.setVisible(false);
-                survivalModeDisplay.setManaged(false);
-            }
+        // Show/hide mode-specific UI - use helper method to reduce repetition
+        setModeDisplayVisibility(sprintModeDisplay, mode == GameMode.SPRINT);
+        setModeDisplayVisibility(ultraModeDisplay, mode == GameMode.ULTRA);
+        setModeDisplayVisibility(survivalModeDisplay, mode == GameMode.SURVIVAL);
+    }
+    
+    /**
+     * Helper method to set visibility and managed state for a mode display
+     */
+    private void setModeDisplayVisibility(javafx.scene.layout.VBox display, boolean visible) {
+        if (display != null) {
+            display.setVisible(visible);
+            display.setManaged(visible);
         }
     }
     
@@ -1011,97 +819,6 @@ public class GuiController implements Initializable {
         return currentGameMode;
     }
     
-    /**
-     * Load Ultra mode best score from file
-     */
-    private void loadUltraBestScore() {
-        try {
-            File scoreFile = new File(ULTRA_BEST_SCORE_FILE);
-            if (scoreFile.exists() && scoreFile.canRead()) {
-                try (BufferedReader reader = new BufferedReader(new FileReader(scoreFile))) {
-                    String line = reader.readLine();
-                    if (line != null && !line.trim().isEmpty()) {
-                        ultraBestScore = Integer.parseInt(line.trim());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("Could not load Ultra best score: " + e.getMessage());
-            ultraBestScore = 0;
-        }
-        updateUltraBestScoreDisplay();
-    }
-    
-    /**
-     * Save Ultra mode best score to file
-     */
-    private void saveUltraBestScore() {
-        try {
-            File scoreFile = new File(ULTRA_BEST_SCORE_FILE);
-            try (PrintWriter writer = new PrintWriter(new FileWriter(scoreFile))) {
-                writer.println(ultraBestScore);
-            }
-        } catch (Exception e) {
-            System.out.println("Could not save Ultra best score: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Update Ultra best score display
-     */
-    private void updateUltraBestScoreDisplay() {
-        if (ultraBestScoreLabel != null) {
-            Platform.runLater(() -> {
-                ultraBestScoreLabel.setText(String.valueOf(ultraBestScore));
-            });
-        }
-    }
-    
-    /**
-     * Load Survival mode highest level from file
-     */
-    private void loadSurvivalHighestLevel() {
-        try {
-            File levelFile = new File(SURVIVAL_HIGHEST_LEVEL_FILE);
-            if (levelFile.exists() && levelFile.canRead()) {
-                try (BufferedReader reader = new BufferedReader(new FileReader(levelFile))) {
-                    String line = reader.readLine();
-                    if (line != null && !line.trim().isEmpty()) {
-                        survivalHighestLevel = Integer.parseInt(line.trim());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("Could not load Survival highest level: " + e.getMessage());
-            survivalHighestLevel = 1;
-        }
-        updateSurvivalHighestLevelDisplay();
-    }
-    
-    /**
-     * Save Survival mode highest level to file
-     */
-    private void saveSurvivalHighestLevel() {
-        try {
-            File levelFile = new File(SURVIVAL_HIGHEST_LEVEL_FILE);
-            try (PrintWriter writer = new PrintWriter(new FileWriter(levelFile))) {
-                writer.println(survivalHighestLevel);
-            }
-        } catch (Exception e) {
-            System.out.println("Could not save Survival highest level: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Update Survival highest level display
-     */
-    private void updateSurvivalHighestLevelDisplay() {
-        if (survivalHighestLevelLabel != null) {
-            Platform.runLater(() -> {
-                survivalHighestLevelLabel.setText(String.valueOf(survivalHighestLevel));
-            });
-        }
-    }
     
     /**
      * Initialize Survival mode
@@ -1143,21 +860,11 @@ public class GuiController implements Initializable {
             survivalNextThreshold += SURVIVAL_SPEED_INCREASE_THRESHOLD;
             
             // Update highest level if this is better
-            if (survivalSpeedLevel > survivalHighestLevel) {
-                survivalHighestLevel = survivalSpeedLevel;
-                saveSurvivalHighestLevel();
-                updateSurvivalHighestLevelDisplay();
-            }
+            scoreManager.updateSurvivalHighestLevel(survivalSpeedLevel);
             
             // Update game timeline speed
             if (timeLine != null && currentGameMode == GameMode.SURVIVAL) {
-                timeLine.stop();
-                timeLine = new Timeline(new KeyFrame(
-                        Duration.millis(survivalSpeedInterval),
-                        ae -> moveDown(new MoveEvent(EventType.DOWN, EventSource.THREAD))
-                ));
-                timeLine.setCycleCount(Timeline.INDEFINITE);
-                timeLine.play();
+                createAndStartGameTimeline(survivalSpeedInterval);
             }
             
             updateSurvivalDisplay();
@@ -1205,7 +912,7 @@ public class GuiController implements Initializable {
      * Update Ultra mode timer display (countdown from 2 minutes)
      */
     private void updateUltraTimerDisplay() {
-        if (ultraStartTime > 0 && ultraTimerLabel != null && !isGameOver.getValue()) {
+        if (ultraStartTime > 0 && ultraTimerLabel != null && !gameStateManager.isGameOver()) {
             long elapsed = System.currentTimeMillis() - ultraStartTime;
             long remaining = ULTRA_TIME_LIMIT - elapsed;
             
@@ -1217,7 +924,7 @@ public class GuiController implements Initializable {
                     timeLine.stop();
                 }
                 // Set game over state to prevent any further moves
-                isGameOver.setValue(true);
+                gameStateManager.setGameOver(true);
                 // Then show completion screen
                 Platform.runLater(() -> {
                     ultraComplete();
@@ -1257,13 +964,7 @@ public class GuiController implements Initializable {
                 
                 // Update game timeline speed
                 if (timeLine != null && currentGameMode == GameMode.ULTRA) {
-                    timeLine.stop();
-                    timeLine = new Timeline(new KeyFrame(
-                            Duration.millis(currentSpeedInterval),
-                            ae -> moveDown(new MoveEvent(EventType.DOWN, EventSource.THREAD))
-                    ));
-                    timeLine.setCycleCount(Timeline.INDEFINITE);
-                    timeLine.play();
+                    createAndStartGameTimeline(currentSpeedInterval);
                 }
                 
                 updateUltraSpeedLevelDisplay();
@@ -1284,7 +985,7 @@ public class GuiController implements Initializable {
         }
         
         // Ensure game over state is set
-        isGameOver.setValue(true);
+        gameStateManager.setGameOver(true);
         
         // Get final score from score label
         int finalScore = 0;
@@ -1297,16 +998,12 @@ public class GuiController implements Initializable {
         }
         
         // Update best score if this is better
-        boolean isNewBest = false;
-        if (finalScore > ultraBestScore) {
-            ultraBestScore = finalScore;
-            saveUltraBestScore();
-            updateUltraBestScoreDisplay();
-            isNewBest = true;
-        }
+        int oldBest = scoreManager.getUltraBestScore();
+        scoreManager.updateUltraBestScore(finalScore);
+        boolean isNewBest = (finalScore > oldBest);
         
         // Show completion message
-        isGameOver.setValue(true);
+        gameStateManager.setGameOver(true);
         gameOverPanel.setVisible(true);
         
         String successMessage = "TIME'S UP!";
@@ -1316,7 +1013,7 @@ public class GuiController implements Initializable {
         gameOverPanel.setGameOverMessage(successMessage);
         
         // Show final score
-        String bestScoreStr = String.valueOf(ultraBestScore);
+        String bestScoreStr = String.valueOf(scoreManager.getUltraBestScore());
         String currentScoreStr = String.valueOf(finalScore);
         gameOverPanel.setTimeInfo("BEST SCORE: " + bestScoreStr, "FINAL SCORE: " + currentScoreStr);
         
@@ -1327,7 +1024,7 @@ public class GuiController implements Initializable {
         }
         
         // Play completion sound
-        playLineClearSound();
+        audioManager.playLineClearSound();
         
         gamePanel.requestFocus();
     }
@@ -1381,15 +1078,11 @@ public class GuiController implements Initializable {
         }
         
         long elapsedTime = System.currentTimeMillis() - sprintStartTime;
-        boolean isNewBest = false;
         
         // Update best time if this is better
-        if (elapsedTime < sprintBestTime) {
-            sprintBestTime = elapsedTime;
-            saveSprintBestTime();
-            updateSprintBestTimeDisplay();
-            isNewBest = true;
-        }
+        long oldBest = scoreManager.getSprintBestTime();
+        scoreManager.updateSprintBestTime(elapsedTime);
+        boolean isNewBest = (elapsedTime < oldBest);
         
         // Stop game timeline
         if (timeLine != null) {
@@ -1397,7 +1090,7 @@ public class GuiController implements Initializable {
         }
         
         // Show big success message
-        isGameOver.setValue(true);
+        gameStateManager.setGameOver(true);
         gameOverPanel.setVisible(true);
         
         String successMessage = "SUCCESS!";
@@ -1407,7 +1100,8 @@ public class GuiController implements Initializable {
         gameOverPanel.setGameOverMessage(successMessage);
         
         // Show best time and current time
-        String bestTimeStr = (sprintBestTime == Long.MAX_VALUE) ? "--:--" : formatTime(sprintBestTime);
+        long bestTime = scoreManager.getSprintBestTime();
+        String bestTimeStr = (bestTime == Long.MAX_VALUE) ? "--:--" : formatTime(bestTime);
         String currentTimeStr = formatTime(elapsedTime);
         gameOverPanel.setTimeInfo(bestTimeStr, currentTimeStr);
         
@@ -1418,69 +1112,19 @@ public class GuiController implements Initializable {
         }
         
         // Play completion sound
-        playLineClearSound();
+        audioManager.playLineClearSound();
         
         gamePanel.requestFocus();
     }
     
     /**
      * Format time in milliseconds to MM:SS format
+     * Delegates to ScoreManager.formatTime()
      */
     private String formatTime(long milliseconds) {
-        long seconds = milliseconds / 1000;
-        long minutes = seconds / 60;
-        seconds = seconds % 60;
-        return String.format("%02d:%02d", minutes, seconds);
+        return ScoreManager.formatTime(milliseconds);
     }
     
-    /**
-     * Load Sprint best time from file
-     */
-    private void loadSprintBestTime() {
-        try {
-            File timeFile = new File(SPRINT_BEST_TIME_FILE);
-            if (timeFile.exists() && timeFile.canRead()) {
-                try (BufferedReader reader = new BufferedReader(new FileReader(timeFile))) {
-                    String line = reader.readLine();
-                    if (line != null && !line.trim().isEmpty()) {
-                        sprintBestTime = Long.parseLong(line.trim());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("Could not load Sprint best time: " + e.getMessage());
-            sprintBestTime = Long.MAX_VALUE;
-        }
-    }
-    
-    /**
-     * Save Sprint best time to file
-     */
-    private void saveSprintBestTime() {
-        try {
-            File timeFile = new File(SPRINT_BEST_TIME_FILE);
-            try (PrintWriter writer = new PrintWriter(new FileWriter(timeFile))) {
-                writer.println(sprintBestTime);
-            }
-        } catch (Exception e) {
-            System.out.println("Could not save Sprint best time: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Update Sprint best time display
-     */
-    private void updateSprintBestTimeDisplay() {
-        if (sprintBestTimeLabel != null) {
-            Platform.runLater(() -> {
-                if (sprintBestTime == Long.MAX_VALUE) {
-                    sprintBestTimeLabel.setText("--:--");
-                } else {
-                    sprintBestTimeLabel.setText(formatTime(sprintBestTime));
-                }
-            });
-        }
-    }
 
     public void gameOver() {
         // Stop Ultra timer if in Ultra mode
@@ -1489,17 +1133,15 @@ public class GuiController implements Initializable {
         }
         
         // Lower background music volume instead of stopping (hybrid approach)
-        if (gameplayBackgroundMusic != null) {
-            gameplayBackgroundMusic.setVolume(0.15); // Lower to 15% volume
-        }
+        audioManager.setBackgroundMusicVolume(0.15); // Lower to 15% volume
         
         // Play game over sound
-        playGameOverSound();
+        audioManager.playGameOverSound();
         
         timeLine.stop();
         gameOverPanel.setVisible(true);
         gameOverPanel.resetToDefault(); // Reset to default game over display
-        isGameOver.setValue(Boolean.TRUE);
+        gameStateManager.setGameOver(true);
         
         // Center the game over panel on screen
         Parent parent = gameBoard.getParent();
@@ -1519,9 +1161,7 @@ public class GuiController implements Initializable {
         gameOverPanel.resetToDefault(); // Reset game over panel to default state
         
         // Restore background music to normal volume when starting new game
-        if (gameplayBackgroundMusic != null) {
-            gameplayBackgroundMusic.setVolume(0.4); // Restore to 40% volume
-        }
+        audioManager.setBackgroundMusicVolume(0.4); // Restore to 40% volume
         
         // Reset mode-specific variables
         if (currentGameMode == GameMode.SPRINT) {
@@ -1564,25 +1204,9 @@ public class GuiController implements Initializable {
         gamePanel.requestFocus();
         
         // Reset timeline with correct speed for mode
-        long initialSpeed = 400;
-        if (currentGameMode == GameMode.SPRINT) {
-            initialSpeed = 400;
-        } else if (currentGameMode == GameMode.ULTRA) {
-            initialSpeed = currentSpeedInterval;
-        } else if (currentGameMode == GameMode.SURVIVAL) {
-            initialSpeed = survivalSpeedInterval;
-        }
+        createAndStartGameTimeline(getInitialSpeedForMode());
         
-        timeLine.stop();
-        timeLine = new Timeline(new KeyFrame(
-                Duration.millis(initialSpeed),
-                ae -> moveDown(new MoveEvent(EventType.DOWN, EventSource.THREAD))
-        ));
-        timeLine.setCycleCount(Timeline.INDEFINITE);
-        timeLine.play();
-        
-        isPause.setValue(Boolean.FALSE);
-        isGameOver.setValue(Boolean.FALSE);
+        gameStateManager.reset();
         
         // Restart mode-specific timers
         if (currentGameMode == GameMode.SPRINT) {
@@ -1599,10 +1223,81 @@ public class GuiController implements Initializable {
     }
     
     /**
+     * Handle key press events for game controls
+     */
+    private void handleKeyPressed(KeyEvent keyEvent) {
+        SettingsManager settings = SettingsManager.getInstance();
+        KeyCode keyCode = keyEvent.getCode();
+        
+        // Game over controls - check FIRST before normal game controls
+        if (gameStateManager.isGameOver()) {
+            if (keyCode == KeyCode.SPACE) {
+                // Press Space to restart game
+                newGame(null);
+                keyEvent.consume();
+                return;
+            } else if (keyCode == settings.getPause()) {
+                // Press pause key to return to main menu
+                backToMenu(null);
+                keyEvent.consume();
+                return;
+            }
+        }
+        
+        // Pause key toggles pause (only when not game over)
+        if (keyCode == settings.getPause() && !gameStateManager.isGameOver()) {
+            togglePause();
+            keyEvent.consume();
+            return;
+        }
+        
+        // Normal game controls (only when not paused and not game over)
+        if (!gameStateManager.isPaused() && !gameStateManager.isGameOver()) {
+            // Move left
+            if (keyCode == settings.getMoveLeft() || keyCode == settings.getMoveLeftAlt()) {
+                refreshBrick(eventListener.onLeftEvent(new MoveEvent(EventType.LEFT, EventSource.USER)));
+                keyEvent.consume();
+            }
+            // Move right
+            if (keyCode == settings.getMoveRight() || keyCode == settings.getMoveRightAlt()) {
+                refreshBrick(eventListener.onRightEvent(new MoveEvent(EventType.RIGHT, EventSource.USER)));
+                keyEvent.consume();
+            }
+            // Rotate
+            if (keyCode == settings.getRotate() || keyCode == settings.getRotateAlt()) {
+                refreshBrick(eventListener.onRotateEvent(new MoveEvent(EventType.ROTATE, EventSource.USER)));
+                keyEvent.consume();
+            }
+            // Move down
+            if (keyCode == settings.getMoveDown() || keyCode == settings.getMoveDownAlt()) {
+                moveDown(new MoveEvent(EventType.DOWN, EventSource.USER));
+                keyEvent.consume();
+            }
+            // Hard drop
+            if (keyCode == settings.getHardDrop()) {
+                hardDrop(new MoveEvent(EventType.HARD_DROP, EventSource.USER));
+                keyEvent.consume();
+            }
+            // Hold piece
+            if (keyCode == settings.getHold() || keyCode == settings.getHoldAlt()) {
+                ViewData newViewData = eventListener.onHoldEvent();
+                refreshBrick(newViewData);
+                keyEvent.consume();
+            }
+        }
+        
+        // Restart key (for quick restart during gameplay)
+        if (keyCode == settings.getRestart() && !gameStateManager.isGameOver()) {
+            newGame(null);
+            keyEvent.consume();
+        }
+    }
+    
+    /**
      * Toggle pause state
      */
     private void togglePause() {
-        if (isPause.getValue() == Boolean.FALSE) {
+        if (!gameStateManager.isPaused()) {
             // Pause the game
             pauseGameInternal();
         } else {
@@ -1615,11 +1310,11 @@ public class GuiController implements Initializable {
      * Pause the game (internal method)
      */
     private void pauseGameInternal() {
-        if (isGameOver.getValue() == Boolean.TRUE) {
+        if (gameStateManager.isGameOver()) {
             return; // Don't pause if game is over
         }
         
-        isPause.setValue(Boolean.TRUE);
+        gameStateManager.setPaused(true);
         
         // Stop game timeline
         if (timeLine != null) {
@@ -1653,8 +1348,8 @@ public class GuiController implements Initializable {
      */
     @FXML
     public void continueGame(ActionEvent actionEvent) {
-        if (isPause.getValue() == Boolean.TRUE) {
-            isPause.setValue(Boolean.FALSE);
+        if (gameStateManager.isPaused()) {
+            gameStateManager.setPaused(false);
             
             // Resume game timeline
             if (timeLine != null) {
@@ -1690,7 +1385,7 @@ public class GuiController implements Initializable {
         }
         
         // Reset pause state
-        isPause.setValue(Boolean.FALSE);
+        gameStateManager.setPaused(false);
         
         // Restart the game
         newGame(null);
@@ -1702,7 +1397,7 @@ public class GuiController implements Initializable {
     @FXML
     public void quitToMainMenuFromPause(ActionEvent actionEvent) {
         // Reset pause state
-        isPause.setValue(Boolean.FALSE);
+        gameStateManager.setPaused(false);
         
         // Hide pause panel
         if (pauseGroup != null) {
@@ -1753,34 +1448,17 @@ public class GuiController implements Initializable {
             
             // Maintain full screen mode
             stage.setFullScreen(true);
-            stage.setFullScreenExitHint("Press ESC to exit full screen");
+            stage.setFullScreenExitKeyCombination(null);
+            stage.setFullScreenExitHint("");
             
             // Stop background video
-            if (gameplayVideoPlayer != null) {
-                gameplayVideoPlayer.stop();
-                gameplayVideoPlayer.dispose();
+            if (videoManager != null) {
+                videoManager.dispose();
             }
             
-            // Stop and dispose sound effects
-            if (blockLandSound != null) {
-                blockLandSound.stop();
-                blockLandSound.dispose();
-            }
-            if (hardDropSound != null) {
-                hardDropSound.stop();
-                hardDropSound.dispose();
-            }
-            if (lineClearSound != null) {
-                lineClearSound.stop();
-                lineClearSound.dispose();
-            }
-            if (gameOverSound != null) {
-                gameOverSound.stop();
-                gameOverSound.dispose();
-            }
-            if (gameplayBackgroundMusic != null) {
-                gameplayBackgroundMusic.stop();
-                gameplayBackgroundMusic.dispose();
+            // Stop and dispose audio resources
+            if (audioManager != null) {
+                audioManager.dispose();
             }
             
             // Set the primary stage reference for the menu controller
@@ -1792,467 +1470,36 @@ public class GuiController implements Initializable {
         }
     }
     
+    // Video initialization methods moved to VideoManager
+    
+    // Audio initialization and playback methods moved to AudioManager
+    
     /**
-     * Initialize background video for gameplay
+     * Get the initial game speed (in milliseconds) based on current game mode
      */
-    private void initializeGameplayBackgroundVideo() {
-        try {
-            System.out.println("Looking for gameplay video: single_player.mp4");
-            
-            if (gameplayBackgroundVideo == null) {
-                System.out.println("✗ Cannot initialize video - MediaView is null");
-                return;
-            }
-            
-            Media videoMedia = null;
-            String foundPath = null;
-            
-            // Method 1: Try loading from resources (works when compiled)
-            URL videoURL = getClass().getClassLoader().getResource("single_player2.mp4");
-            if (videoURL != null) {
-                try {
-                    videoMedia = new Media(videoURL.toString());
-                    foundPath = videoURL.toString();
-                    System.out.println("✓ Video found in resources: " + foundPath);
-                } catch (Exception e) {
-                    System.out.println("✗ Failed to load video from resources: " + e.getMessage());
-                }
-            }
-            
-            // Method 2: Try direct file path (works during development)
-            if (videoMedia == null) {
-                String videoPath = "src/main/resources/single_player.mp4";
-                File videoFile = new File(videoPath);
-                if (videoFile.exists()) {
-                    try {
-                        videoMedia = new Media(videoFile.toURI().toString());
-                        foundPath = videoFile.getAbsolutePath();
-                        System.out.println("✓ Video found at file path: " + foundPath);
-                    } catch (Exception e) {
-                        System.out.println("✗ Failed to load video from file: " + e.getMessage());
-                    }
-                } else {
-                    System.out.println("✗ Video file not found at: " + videoFile.getAbsolutePath());
-                }
-            }
-            
-            if (videoMedia == null) {
-                System.out.println("✗ No video file found - gameplay will use background color only");
-                return;
-            }
-            
-            // Create MediaPlayer
-            System.out.println("Creating MediaPlayer for gameplay video...");
-            gameplayVideoPlayer = new MediaPlayer(videoMedia);
-            
-            // Set up video properties
-            gameplayVideoPlayer.setCycleCount(MediaPlayer.INDEFINITE);
-            gameplayVideoPlayer.setMute(true); // Mute video audio
-            gameplayVideoPlayer.setAutoPlay(false);
-            
-            // Add event handlers
-            gameplayVideoPlayer.setOnError(() -> {
-                if (gameplayVideoPlayer.getError() != null) {
-                    System.out.println("✗ Video player error: " + gameplayVideoPlayer.getError().getMessage());
-                }
-            });
-            
-            gameplayVideoPlayer.setOnReady(() -> {
-                System.out.println("✓ Gameplay video player ready - starting playback");
-                gameplayVideoPlayer.play();
-            });
-            
-            gameplayVideoPlayer.setOnPlaying(() -> {
-                System.out.println("✓ Gameplay video is now playing");
-            });
-            
-            gameplayVideoPlayer.setOnEndOfMedia(() -> {
-                System.out.println("Gameplay video ended - restarting");
-                gameplayVideoPlayer.seek(Duration.ZERO);
-                gameplayVideoPlayer.play();
-            });
-            
-            // Bind to MediaView
-            gameplayBackgroundVideo.setMediaPlayer(gameplayVideoPlayer);
-            
-            // Setup video sizing after scene is available
-            if (gameplayBackgroundVideo.getScene() != null) {
-                setupGameplayVideoFullScreen();
-            } else {
-                gameplayBackgroundVideo.sceneProperty().addListener((obs, oldScene, newScene) -> {
-                    if (newScene != null) {
-                        setupGameplayVideoFullScreen();
-                    }
-                });
-            }
-            
-            System.out.println("✓ Gameplay video bound to MediaView and configured for full screen");
-            
-        } catch (Exception e) {
-            System.out.println("✗ Gameplay video initialization failed: " + e.getMessage());
-            e.printStackTrace();
+    private long getInitialSpeedForMode() {
+        if (currentGameMode == GameMode.SPRINT) {
+            return 400; // Sprint mode: fixed 400ms
+        } else if (currentGameMode == GameMode.ULTRA) {
+            return currentSpeedInterval; // Ultra mode: starts at 400ms
+        } else if (currentGameMode == GameMode.SURVIVAL) {
+            return survivalSpeedInterval; // Survival mode: starts at 400ms, increases with score
         }
+        return 400; // Default for Classic mode
     }
     
     /**
-     * Setup gameplay video to fill entire screen
+     * Create and start the game timeline with the specified speed
      */
-    private void setupGameplayVideoFullScreen() {
-        if (gameplayBackgroundVideo != null) {
-            if (gameplayBackgroundVideo.getScene() != null) {
-                gameplayBackgroundVideo.fitWidthProperty().bind(gameplayBackgroundVideo.getScene().widthProperty());
-                gameplayBackgroundVideo.fitHeightProperty().bind(gameplayBackgroundVideo.getScene().heightProperty());
-                System.out.println("✓ Gameplay video size bound to scene dimensions - full screen coverage");
-            } else {
-                // Fallback - set large enough to cover typical screens
-                gameplayBackgroundVideo.setFitWidth(1920);
-                gameplayBackgroundVideo.setFitHeight(1080);
-                System.out.println("✓ Gameplay video set to large size for full screen coverage (fallback)");
-            }
+    private void createAndStartGameTimeline(long speed) {
+        if (timeLine != null) {
+            timeLine.stop();
         }
-    }
-    
-    /**
-     * Setup dark overlay - makes the entire background 70% darker
-     */
-    private void setupVignetteEffect() {
-        if (gameplayVideoOverlay == null) {
-            System.out.println("✗ gameplayVideoOverlay is null");
-            return;
-        }
-        
-        System.out.println("Setting up dark overlay (70% darker)...");
-        
-        // Use Platform.runLater to ensure scene is ready
-        Platform.runLater(() -> {
-            Runnable applyOverlay = () -> {
-                if (gameplayVideoOverlay.getScene() == null) {
-                    System.out.println("✗ Scene is null, cannot apply overlay");
-                    return;
-                }
-                
-                System.out.println("Applying uniform dark overlay (70% darker)...");
-                
-                // Create uniform dark overlay - 70% darker (0.7 opacity black)
-                Color darkOverlay = Color.rgb(0, 0, 0, 0.7);
-                
-                // Set the background with uniform dark color
-                gameplayVideoOverlay.setBackground(new javafx.scene.layout.Background(
-                    new javafx.scene.layout.BackgroundFill(darkOverlay, null, null)
-                ));
-                
-                // Make overlay fill entire scene
-                javafx.scene.Scene scene = gameplayVideoOverlay.getScene();
-                
-                // Unbind first to avoid conflicts
-                gameplayVideoOverlay.prefWidthProperty().unbind();
-                gameplayVideoOverlay.prefHeightProperty().unbind();
-                
-                // Bind to scene size
-                gameplayVideoOverlay.prefWidthProperty().bind(scene.widthProperty());
-                gameplayVideoOverlay.prefHeightProperty().bind(scene.heightProperty());
-                gameplayVideoOverlay.setMaxWidth(Double.MAX_VALUE);
-                gameplayVideoOverlay.setMaxHeight(Double.MAX_VALUE);
-                gameplayVideoOverlay.setManaged(false); // Disable managed sizing
-                
-                // Ensure it's visible
-                gameplayVideoOverlay.setVisible(true);
-                gameplayVideoOverlay.setMouseTransparent(true); // Allow clicks to pass through
-                
-                System.out.println("✓ Dark overlay applied (70% darker)!");
-                System.out.println("  Overlay size: " + gameplayVideoOverlay.getPrefWidth() + "x" + gameplayVideoOverlay.getPrefHeight());
-                System.out.println("  Scene size: " + scene.getWidth() + "x" + scene.getHeight());
-            };
-            
-            if (gameplayVideoOverlay.getScene() != null) {
-                applyOverlay.run();
-            } else {
-                System.out.println("Waiting for scene to be ready...");
-                // Wait for scene to be ready
-                gameplayVideoOverlay.sceneProperty().addListener((obs, oldScene, newScene) -> {
-                    if (newScene != null) {
-                        System.out.println("Scene is now ready, applying dark overlay...");
-                        applyOverlay.run();
-                    }
-                });
-            }
-        });
-    }
-    
-    /**
-     * Initialize sound effects for gameplay
-     */
-    private void initializeSoundEffects() {
-        try {
-            System.out.println("Initializing sound effects...");
-            
-            // Try to load block land sound
-            loadSoundEffect(new String[]{
-                "audio/block_land.mp3", 
-                "audio/block_place.mp3", 
-                "audio/land.wav", 
-                "audio/place.wav",
-                "audio/block_land.wav",
-                "audio/place_block.mp3"
-            }, "blockLandSound");
-            
-            // Try to load hard drop sound
-            loadSoundEffect(new String[]{
-                "audio/hard_drop.mp3", 
-                "audio/drop.mp3", 
-                "audio/hard_drop.wav",
-                "audio/drop.wav",
-                "audio/harddrop.mp3"
-            }, "hardDropSound");
-            
-            // Try to load line clear sound
-            loadSoundEffect(new String[]{
-                "audio/tetris_success.wav",
-                "audio/line_clear.wav",
-                "audio/line_clear.mp3",
-                "audio/success.wav",
-                "audio/clear.wav"
-            }, "lineClearSound");
-            
-            // Try to load game over sound
-            loadSoundEffect(new String[]{
-                "audio/game_over.wav",
-                "audio/gameover.wav",
-                "audio/game_over.mp3",
-                "audio/gameover.mp3"
-            }, "gameOverSound");
-            
-            System.out.println("✓ Sound effects initialization complete");
-        } catch (Exception e) {
-            System.out.println("✗ Sound effects initialization failed: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-    
-    /**
-     * Helper method to load a sound effect, trying multiple possible file names
-     * @param fileNames Array of possible file names to try
-     * @param variableName Name of the variable to assign to ("blockLandSound" or "hardDropSound")
-     */
-    private void loadSoundEffect(String[] fileNames, String variableName) {
-        Media soundMedia = null;
-        String foundFile = null;
-        
-        // Try loading from resources first
-        for (String fileName : fileNames) {
-            URL soundURL = getClass().getClassLoader().getResource(fileName);
-            if (soundURL != null) {
-                try {
-                    soundMedia = new Media(soundURL.toString());
-                    foundFile = fileName;
-                    System.out.println("✓ Sound found: " + fileName);
-                    break;
-                } catch (Exception e) {
-                    System.out.println("✗ Failed to load " + fileName + ": " + e.getMessage());
-                }
-            }
-        }
-        
-        // If not found in resources, try direct file paths
-        if (soundMedia == null) {
-            for (String fileName : fileNames) {
-                String fullPath = "src/main/resources/" + fileName;
-                File soundFile = new File(fullPath);
-                if (soundFile.exists()) {
-                    try {
-                        soundMedia = new Media(soundFile.toURI().toString());
-                        foundFile = fileName;
-                        System.out.println("✓ Sound found at: " + fullPath);
-                        break;
-                    } catch (Exception e) {
-                        System.out.println("✗ Failed to load " + fullPath + ": " + e.getMessage());
-                    }
-                }
-            }
-        }
-        
-        if (soundMedia != null) {
-            MediaPlayer soundPlayer = new MediaPlayer(soundMedia);
-            soundPlayer.setVolume(0.5); // Set volume to 50%
-            
-            // Apply SFX volume from settings
-            SettingsManager settings = SettingsManager.getInstance();
-            soundPlayer.setVolume(settings.getSfxVolume());
-            
-            if (variableName.equals("blockLandSound")) {
-                blockLandSound = soundPlayer;
-            } else if (variableName.equals("hardDropSound")) {
-                hardDropSound = soundPlayer;
-            } else if (variableName.equals("lineClearSound")) {
-                lineClearSound = soundPlayer;
-            } else if (variableName.equals("gameOverSound")) {
-                gameOverSound = soundPlayer;
-            }
-            
-            System.out.println("✓ Sound effect loaded for: " + foundFile + " -> " + variableName);
-        } else {
-            System.out.println("✗ No sound file found for " + variableName + ". Tried:");
-            for (String fileName : fileNames) {
-                System.out.println("  - " + fileName);
-            }
-            System.out.println("Place sound files in src/main/resources/audio/");
-        }
-    }
-    
-    /**
-     * Play block landing sound
-     */
-    private void playBlockLandSound() {
-        SettingsManager settings = SettingsManager.getInstance();
-        if (blockLandSound != null && settings.isSfxEnabled()) {
-            // Reset to start if already playing
-            blockLandSound.seek(Duration.ZERO);
-            blockLandSound.play();
-        }
-    }
-    
-    /**
-     * Play hard drop sound
-     */
-    private void playHardDropSound() {
-        SettingsManager settings = SettingsManager.getInstance();
-        if (hardDropSound != null && settings.isSfxEnabled()) {
-            // Reset to start if already playing
-            hardDropSound.seek(Duration.ZERO);
-            hardDropSound.play();
-        }
-    }
-    
-    /**
-     * Play line clear success sound
-     */
-    private void playLineClearSound() {
-        SettingsManager settings = SettingsManager.getInstance();
-        if (lineClearSound != null && settings.isSfxEnabled()) {
-            // Reset to start if already playing
-            lineClearSound.seek(Duration.ZERO);
-            lineClearSound.play();
-        }
-    }
-    
-    /**
-     * Play game over sound
-     */
-    private void playGameOverSound() {
-        SettingsManager settings = SettingsManager.getInstance();
-        if (gameOverSound != null && settings.isSfxEnabled()) {
-            // Reset to start if already playing
-            gameOverSound.seek(Duration.ZERO);
-            
-            // Set higher volume for game over sound so it's clearly heard over the background music
-            gameOverSound.setVolume(0.85); // 85% volume for game over sound
-            
-            // When game over sound ends, optionally restore background music volume
-            gameOverSound.setOnEndOfMedia(() -> {
-                // Keep background music at low volume during game over screen
-                if (gameplayBackgroundMusic != null) {
-                    gameplayBackgroundMusic.setVolume(0.2); // Slightly increase to 20% after sound finishes
-                }
-            });
-            
-            gameOverSound.play();
-        }
-    }
-    
-    /**
-     * Initialize background music for gameplay
-     */
-    private void initializeGameplayBackgroundMusic() {
-        try {
-            System.out.println("Initializing gameplay background music...");
-            
-            Media musicMedia = null;
-            String foundFile = null;
-            
-            // Try multiple possible filenames
-            String[] musicFiles = {
-                "audio/play_music.mp3",
-                "audio/gameplay_music.mp3",
-                "audio/game_music.mp3",
-                "audio/music.mp3"
-            };
-            
-            // Try loading from resources first
-            for (String fileName : musicFiles) {
-                URL musicURL = getClass().getClassLoader().getResource(fileName);
-                if (musicURL != null) {
-                    try {
-                        musicMedia = new Media(musicURL.toString());
-                        foundFile = fileName;
-                        System.out.println("✓ Background music found: " + fileName);
-                        break;
-                    } catch (Exception e) {
-                        System.out.println("✗ Failed to load " + fileName + ": " + e.getMessage());
-                    }
-                }
-            }
-            
-            // If not found in resources, try direct file paths
-            if (musicMedia == null) {
-                for (String fileName : musicFiles) {
-                    String fullPath = "src/main/resources/" + fileName;
-                    File musicFile = new File(fullPath);
-                    if (musicFile.exists()) {
-                        try {
-                            musicMedia = new Media(musicFile.toURI().toString());
-                            foundFile = fileName;
-                            System.out.println("✓ Background music found at: " + fullPath);
-                            break;
-                        } catch (Exception e) {
-                            System.out.println("✗ Failed to load " + fullPath + ": " + e.getMessage());
-                        }
-                    }
-                }
-            }
-            
-            if (musicMedia != null) {
-                gameplayBackgroundMusic = new MediaPlayer(musicMedia);
-                
-                // Set up music properties for seamless looping
-                SettingsManager settings = SettingsManager.getInstance();
-                gameplayBackgroundMusic.setCycleCount(MediaPlayer.INDEFINITE);
-                gameplayBackgroundMusic.setVolume(settings.getMusicVolume());
-                gameplayBackgroundMusic.setAutoPlay(false); // Start manually
-                
-                // Add event handlers
-                gameplayBackgroundMusic.setOnError(() -> {
-                    if (gameplayBackgroundMusic.getError() != null) {
-                        System.out.println("✗ Background music error: " + gameplayBackgroundMusic.getError().getMessage());
-                    }
-                });
-                
-                gameplayBackgroundMusic.setOnReady(() -> {
-                    System.out.println("✓ Gameplay background music ready - starting playback");
-                    gameplayBackgroundMusic.play();
-                });
-                
-                gameplayBackgroundMusic.setOnPlaying(() -> {
-                    System.out.println("✓ Gameplay background music is now playing");
-                });
-                
-                gameplayBackgroundMusic.setOnEndOfMedia(() -> {
-                    System.out.println("Gameplay music ended - restarting");
-                    gameplayBackgroundMusic.seek(Duration.ZERO);
-                    gameplayBackgroundMusic.play();
-                });
-                
-                System.out.println("✓ Gameplay background music setup completed for: " + foundFile);
-            } else {
-                System.out.println("✗ No background music file found. Tried:");
-                for (String fileName : musicFiles) {
-                    System.out.println("  - " + fileName);
-                }
-                System.out.println("Place your music file in src/main/resources/audio/ with one of the above names");
-            }
-            
-        } catch (Exception e) {
-            System.out.println("✗ Gameplay background music initialization failed: " + e.getMessage());
-            e.printStackTrace();
-        }
+        timeLine = new Timeline(new KeyFrame(
+                Duration.millis(speed),
+                ae -> moveDown(new MoveEvent(EventType.DOWN, EventSource.THREAD))
+        ));
+        timeLine.setCycleCount(Timeline.INDEFINITE);
+        timeLine.play();
     }
 }

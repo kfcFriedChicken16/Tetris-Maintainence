@@ -43,10 +43,9 @@
                     </font>
                 </Label>
                 
-                <GridPane hgap="20" vgap="15" alignment="CENTER" prefWidth="700" gridLinesVisible="false">
+                <GridPane hgap="20" vgap="15" alignment="CENTER" prefWidth="500" gridLinesVisible="false">
                     <columnConstraints>
                         <ColumnConstraints minWidth="180" prefWidth="200" maxWidth="220" halignment="RIGHT" hgrow="NEVER"/>
-                        <ColumnConstraints minWidth="140" prefWidth="150" maxWidth="170" halignment="CENTER" hgrow="NEVER"/>
                         <ColumnConstraints minWidth="140" prefWidth="150" maxWidth="170" halignment="CENTER" hgrow="NEVER"/>
                     </columnConstraints>
                     <rowConstraints>
@@ -63,42 +62,34 @@
                     <!-- Row 1: Move Left -->
                     <Label text="Move Left:" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="setting-label"/>
                     <Button fx:id="moveLeftBtn" text="LEFT" GridPane.columnIndex="1" GridPane.rowIndex="0" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
-                    <Button fx:id="moveLeftAltBtn" text="A" GridPane.columnIndex="2" GridPane.rowIndex="0" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
                     
                     <!-- Row 2: Move Right -->
                     <Label text="Move Right:" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="setting-label"/>
                     <Button fx:id="moveRightBtn" text="RIGHT" GridPane.columnIndex="1" GridPane.rowIndex="1" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
-                    <Button fx:id="moveRightAltBtn" text="D" GridPane.columnIndex="2" GridPane.rowIndex="1" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
                     
                     <!-- Row 3: Move Down -->
                     <Label text="Move Down:" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="setting-label"/>
                     <Button fx:id="moveDownBtn" text="DOWN" GridPane.columnIndex="1" GridPane.rowIndex="2" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
-                    <Button fx:id="moveDownAltBtn" text="S" GridPane.columnIndex="2" GridPane.rowIndex="2" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
                     
                     <!-- Row 4: Rotate -->
                     <Label text="Rotate:" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="setting-label"/>
                     <Button fx:id="rotateBtn" text="UP" GridPane.columnIndex="1" GridPane.rowIndex="3" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
-                    <Button fx:id="rotateAltBtn" text="W" GridPane.columnIndex="2" GridPane.rowIndex="3" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
                     
                     <!-- Row 5: Hard Drop -->
                     <Label text="Hard Drop:" GridPane.columnIndex="0" GridPane.rowIndex="4" styleClass="setting-label"/>
                     <Button fx:id="hardDropBtn" text="SPACE" GridPane.columnIndex="1" GridPane.rowIndex="4" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
-                    <Label text="" GridPane.columnIndex="2" GridPane.rowIndex="4"/>
                     
                     <!-- Row 6: Hold -->
                     <Label text="Hold:" GridPane.columnIndex="0" GridPane.rowIndex="5" styleClass="setting-label"/>
                     <Button fx:id="holdBtn" text="C" GridPane.columnIndex="1" GridPane.rowIndex="5" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
-                    <Button fx:id="holdAltBtn" text="SHIFT" GridPane.columnIndex="2" GridPane.rowIndex="5" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
                     
                     <!-- Row 7: Pause -->
                     <Label text="Pause:" GridPane.columnIndex="0" GridPane.rowIndex="6" styleClass="setting-label"/>
                     <Button fx:id="pauseBtn" text="ESC" GridPane.columnIndex="1" GridPane.rowIndex="6" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
-                    <Label text="" GridPane.columnIndex="2" GridPane.rowIndex="6"/>
                     
                     <!-- Row 8: Restart -->
                     <Label text="Restart:" GridPane.columnIndex="0" GridPane.rowIndex="7" styleClass="setting-label"/>
                     <Button fx:id="restartBtn" text="N" GridPane.columnIndex="1" GridPane.rowIndex="7" onAction="#changeKeyBinding" styleClass="key-binding-button"/>
-                    <Label text="" GridPane.columnIndex="2" GridPane.rowIndex="7"/>
                 </GridPane>
             </VBox>
             

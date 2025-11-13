@@ -45,7 +45,8 @@ public class Main extends Application {
         // Enable full screen mode
         primaryStage.setResizable(true);
         primaryStage.setFullScreen(true);
-        primaryStage.setFullScreenExitHint("Press ESC to exit full screen");
+        primaryStage.setFullScreenExitKeyCombination(null);
+        primaryStage.setFullScreenExitHint("");
         primaryStage.setMaximized(true);
         
         primaryStage.show();

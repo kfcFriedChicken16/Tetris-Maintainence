@@ -236,7 +236,8 @@ public class ModeSelectionController implements Initializable {
             
             // Maintain full screen mode
             stage.setFullScreen(true);
-            stage.setFullScreenExitHint("Press ESC to exit full screen");
+            stage.setFullScreenExitKeyCombination(null);
+            stage.setFullScreenExitHint("");
             
             // Initialize the game controller with selected mode
             new GameController(guiController, mode);
@@ -291,7 +292,8 @@ public class ModeSelectionController implements Initializable {
             
             // Maintain full screen mode
             stage.setFullScreen(true);
-            stage.setFullScreenExitHint("Press ESC to exit full screen");
+            stage.setFullScreenExitKeyCombination(null);
+            stage.setFullScreenExitHint("");
             
         } catch (Exception e) {
             e.printStackTrace();

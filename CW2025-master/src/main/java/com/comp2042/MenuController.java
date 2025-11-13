@@ -30,13 +30,10 @@ import java.util.ResourceBundle;
 public class MenuController implements Initializable {
 
     @FXML private Button singlePlayerBtn;
-    @FXML private Button multiplayerBtn;
     @FXML private Button settingsBtn;
-    @FXML private Button highScoresBtn;
     @FXML private Button exitBtn;
     @FXML private javafx.scene.control.Label instructionLabel;
     @FXML private javafx.scene.layout.VBox menuButtonsContainer;
-    @FXML private javafx.scene.control.Label versionLabel;
     @FXML private javafx.scene.control.Label titleLabel;
     @FXML private MediaView backgroundVideo;
     
@@ -104,10 +101,6 @@ public class MenuController implements Initializable {
         if (modeButtonsContainer != null) {
             modeButtonsContainer.setVisible(false);
             modeButtonsContainer.setManaged(false);
-        }
-        if (versionLabel != null) {
-            versionLabel.setVisible(false);
-            versionLabel.setManaged(false);
         }
     }
     
@@ -192,17 +185,6 @@ public class MenuController implements Initializable {
             
             ParallelTransition reveal = new ParallelTransition(fadeIn, slideUp);
             reveal.play();
-        }
-        
-        // Show version info
-        if (versionLabel != null) {
-            versionLabel.setManaged(true);
-            versionLabel.setVisible(true);
-            versionLabel.setOpacity(0);
-            FadeTransition versionFade = new FadeTransition(Duration.millis(400), versionLabel);
-            versionFade.setDelay(Duration.millis(200));
-            versionFade.setToValue(1.0);
-            versionFade.play();
         }
     }
     
@@ -481,9 +463,7 @@ public class MenuController implements Initializable {
      */
     private void addButtonAnimations() {
         addButtonHoverEffect(singlePlayerBtn);
-        addButtonHoverEffect(multiplayerBtn);
         addButtonHoverEffect(settingsBtn);
-        addButtonHoverEffect(highScoresBtn);
         addButtonHoverEffect(exitBtn);
         
         // Add animations to mode buttons
@@ -563,17 +543,6 @@ public class MenuController implements Initializable {
             // If menu buttons are already hidden, just show mode buttons
             showModeButtons();
         }
-        
-        // Hide version label
-        if (versionLabel != null && versionLabel.isVisible()) {
-            FadeTransition fadeOut = new FadeTransition(Duration.millis(300), versionLabel);
-            fadeOut.setToValue(0);
-            fadeOut.setOnFinished(e -> {
-                versionLabel.setVisible(false);
-                versionLabel.setManaged(false);
-            });
-            fadeOut.play();
-        }
     }
     
     /**
@@ -584,10 +553,6 @@ public class MenuController implements Initializable {
         if (menuButtonsContainer != null) {
             menuButtonsContainer.setVisible(false);
             menuButtonsContainer.setManaged(false);
-        }
-        if (versionLabel != null) {
-            versionLabel.setVisible(false);
-            versionLabel.setManaged(false);
         }
         
         // Now show mode buttons
@@ -655,16 +620,6 @@ public class MenuController implements Initializable {
                     ParallelTransition parallel = new ParallelTransition(fadeIn, slideUp);
                     parallel.play();
                 }
-                
-                // Show version label
-                if (versionLabel != null) {
-                    versionLabel.setManaged(true);
-                    versionLabel.setVisible(true);
-                    versionLabel.setOpacity(0);
-                    FadeTransition fadeInLabel = new FadeTransition(Duration.millis(400), versionLabel);
-                    fadeInLabel.setToValue(1.0);
-                    fadeInLabel.play();
-                }
             });
             fadeOut.play();
         }
@@ -710,7 +665,8 @@ public class MenuController implements Initializable {
             
             // Maintain full screen mode
             stage.setFullScreen(true);
-            stage.setFullScreenExitHint("Press ESC to exit full screen");
+            stage.setFullScreenExitKeyCombination(null);
+            stage.setFullScreenExitHint("");
             
             // Initialize the game controller with selected mode
             new GameController(guiController, mode);
@@ -742,15 +698,6 @@ public class MenuController implements Initializable {
     }
 
     /**
-     * Handle Multiplayer button click - TODO: Implement multiplayer mode
-     */
-    @FXML
-    private void startMultiplayer(ActionEvent event) {
-        // TODO: Implement multiplayer functionality
-        showInfoAlert("Multiplayer Mode", "Local multiplayer mode coming soon!\n\nThis will feature:\n- Split-screen gameplay\n- Competitive scoring\n- Attack mechanics");
-    }
-
-    /**
      * Handle Settings button click - Open settings menu
      */
     @FXML
@@ -778,7 +725,8 @@ public class MenuController implements Initializable {
             
             SettingsManager settingsManager = SettingsManager.getInstance();
             stage.setFullScreen(settingsManager.isFullscreen());
-            stage.setFullScreenExitHint("Press ESC to exit full screen");
+            stage.setFullScreenExitKeyCombination(null);
+            stage.setFullScreenExitHint("");
             
             settingsController.setPrimaryStage(stage);
             
@@ -787,15 +735,6 @@ public class MenuController implements Initializable {
             System.out.println("Error opening settings: " + e.getMessage());
             showInfoAlert("Error", "Could not open settings menu: " + e.getMessage());
         }
-    }
-
-    /**
-     * Handle High Scores button click - TODO: Implement high scores
-     */
-    @FXML
-    private void showHighScores(ActionEvent event) {
-        // TODO: Implement high scores functionality
-        showInfoAlert("High Scores", "High scores leaderboard coming soon!\n\nWill feature:\n- Local high scores\n- Score statistics\n- Achievement tracking");
     }
 
     /**

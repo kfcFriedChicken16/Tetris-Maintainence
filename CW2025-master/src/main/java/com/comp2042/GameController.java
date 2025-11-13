@@ -37,13 +37,8 @@ public class GameController implements InputEventListener {
             }
             
             // Check Sprint mode completion (40 lines)
-            if (currentMode == GameMode.SPRINT) {
-                int linesCleared = ((SimpleBoard) board).getTotalLinesCleared();
-                viewGuiController.updateSprintLines(linesCleared);
-                if (linesCleared >= 40) {
-                    viewGuiController.sprintComplete();
-                    return new DownData(clearRow, board.getViewData());
-                }
+            if (checkSprintCompletion(clearRow)) {
+                return new DownData(clearRow, board.getViewData());
             }
             
             if (board.createNewBrick()) {
@@ -96,13 +91,8 @@ public class GameController implements InputEventListener {
         }
         
         // Check Sprint mode completion (40 lines)
-        if (currentMode == GameMode.SPRINT) {
-            int linesCleared = ((SimpleBoard) board).getTotalLinesCleared();
-            viewGuiController.updateSprintLines(linesCleared);
-            if (linesCleared >= 40) {
-                viewGuiController.sprintComplete();
-                return new DownData(clearRow, board.getViewData());
-            }
+        if (checkSprintCompletion(clearRow)) {
+            return new DownData(clearRow, board.getViewData());
         }
         
         if (board.createNewBrick()) {
@@ -111,6 +101,22 @@ public class GameController implements InputEventListener {
         
         viewGuiController.refreshGameBackground(board.getBoardMatrix());
         return new DownData(clearRow, board.getViewData());
+    }
+    
+    /**
+     * Check if Sprint mode completion condition is met (40 lines cleared).
+     * Returns true if game should end, false otherwise.
+     */
+    private boolean checkSprintCompletion(ClearRow clearRow) {
+        if (currentMode == GameMode.SPRINT) {
+            int linesCleared = board.getTotalLinesCleared();
+            viewGuiController.updateSprintLines(linesCleared);
+            if (linesCleared >= 40) {
+                viewGuiController.sprintComplete();
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
