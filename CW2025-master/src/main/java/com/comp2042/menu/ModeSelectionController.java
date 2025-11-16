@@ -18,7 +18,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import com.comp2042.modes.GameMode;
-import com.comp2042.ui.GuiController;
+import com.comp2042.ui.GameViewController;
 import com.comp2042.core.GameController;
 
 import java.io.File;
@@ -230,7 +230,7 @@ public class ModeSelectionController implements Initializable {
             Parent gameRoot = fxmlLoader.load();
             
             // Get the GuiController and start the game
-            GuiController guiController = fxmlLoader.getController();
+            GameViewController guiController = fxmlLoader.getController();
             
             // Get current stage and switch scene
             Stage stage = (Stage) classicBtn.getScene().getWindow();
@@ -238,10 +238,14 @@ public class ModeSelectionController implements Initializable {
             stage.setScene(gameScene);
             stage.setTitle("Tetris - " + mode.getDisplayName());
             
-            // Maintain full screen mode
+            // Lock in full screen mode - cannot be exited
+            stage.setResizable(false); // Prevent window manipulation
             stage.setFullScreen(true);
             stage.setFullScreenExitKeyCombination(null);
             stage.setFullScreenExitHint("");
+            
+            // Add fullscreen enforcement listener
+            enforceFullscreenMode(stage);
             
             // Initialize the game controller with selected mode
             new GameController(guiController, mode);
@@ -294,14 +298,35 @@ public class ModeSelectionController implements Initializable {
             stage.setScene(menuScene);
             stage.setTitle("Tetris - Enhanced Edition");
             
-            // Maintain full screen mode
+            // Lock in full screen mode - cannot be exited
+            stage.setResizable(false); // Prevent window manipulation
             stage.setFullScreen(true);
             stage.setFullScreenExitKeyCombination(null);
             stage.setFullScreenExitHint("");
             
+            // Add fullscreen enforcement listener
+            enforceFullscreenMode(stage);
+            
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println("Error returning to menu: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Enforce fullscreen mode with listener to prevent exits
+     */
+    private void enforceFullscreenMode(Stage stage) {
+        if (stage != null) {
+            // Add a listener to prevent any attempts to exit fullscreen
+            stage.fullScreenProperty().addListener((obs, wasFullScreen, isNowFullScreen) -> {
+                if (!isNowFullScreen) {
+                    // If someone tries to exit fullscreen, immediately re-enable it
+                    stage.setFullScreen(true);
+                    stage.setFullScreenExitKeyCombination(null);
+                    stage.setFullScreenExitHint("");
+                }
+            });
         }
     }
 }

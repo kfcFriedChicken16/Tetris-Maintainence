@@ -7,7 +7,7 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 import com.comp2042.menu.MainMenu;
-import com.comp2042.ui.GuiController;
+import com.comp2042.ui.GameViewController;
 import com.comp2042.core.GameController;
 
 import java.net.URL;
@@ -40,14 +40,14 @@ public class Main extends Application {
         ResourceBundle resources = null;
         FXMLLoader fxmlLoader = new FXMLLoader(location, resources);
         Parent root = fxmlLoader.load();
-        GuiController c = fxmlLoader.getController();
+        GameViewController c = fxmlLoader.getController();
 
         primaryStage.setTitle("TetrisJFX - Full Screen");
         Scene scene = new Scene(root, 1200, 800); // Larger default size
         primaryStage.setScene(scene);
         
-        // Enable full screen mode
-        primaryStage.setResizable(true);
+        // Enable full screen mode - locked, cannot be exited
+        primaryStage.setResizable(false); // Prevent window manipulation
         primaryStage.setFullScreen(true);
         primaryStage.setFullScreenExitKeyCombination(null);
         primaryStage.setFullScreenExitHint("");

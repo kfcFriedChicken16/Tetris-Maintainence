@@ -6,21 +6,21 @@ import com.comp2042.events.EventSource;
 import com.comp2042.models.DownData;
 import com.comp2042.models.ViewData;
 import com.comp2042.models.ClearRow;
-import com.comp2042.ui.GuiController;
+import com.comp2042.ui.GameViewController;
 import com.comp2042.modes.GameMode;
 
 public class GameController implements InputEventListener {
 
-    private Board board = new SimpleBoard(25, 10);
+    private Board board = new TetrisBoard(25, 10);
 
-    private final GuiController viewGuiController;
+    private final GameViewController viewGuiController;
     private GameMode currentMode;
 
-    public GameController(GuiController c) {
+    public GameController(GameViewController c) {
         this(c, GameMode.CLASSIC); // Default to Classic mode for backward compatibility
     }
     
-    public GameController(GuiController c, GameMode mode) {
+    public GameController(GameViewController c, GameMode mode) {
         viewGuiController = c;
         currentMode = mode;
         board.createNewBrick();

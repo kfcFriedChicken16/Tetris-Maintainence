@@ -342,9 +342,14 @@ public class SettingsController implements Initializable {
         // Show success message inline
         showSuccessMessage("Settings saved successfully!");
         
-        // Apply fullscreen setting if stage is available (game options UI removed but setting still works)
+        // Fullscreen is always enabled - no need to apply setting
         if (primaryStage != null) {
-            primaryStage.setFullScreen(settingsManager.isFullscreen());
+            primaryStage.setFullScreen(true); // Always fullscreen
+            primaryStage.setFullScreenExitKeyCombination(null);
+            primaryStage.setFullScreenExitHint("");
+            
+            // Add fullscreen enforcement listener
+            enforceFullscreenMode(primaryStage);
         }
     }
     
@@ -389,7 +394,7 @@ public class SettingsController implements Initializable {
         settingsManager.setSfxVolume(0.5);
         settingsManager.setMusicEnabled(true);
         settingsManager.setSfxEnabled(true);
-        settingsManager.setFullscreen(true);
+        // Fullscreen is always true - no need to set
         settingsManager.setShowGhostPiece(true);
         
         // Save the reset settings
@@ -424,9 +429,13 @@ public class SettingsController implements Initializable {
             Scene menuScene = new Scene(menuRoot, 1200, 800);
             stage.setScene(menuScene);
             stage.setTitle("Tetris - Enhanced Edition");
-            stage.setFullScreen(settingsManager.isFullscreen());
+            stage.setResizable(false); // Prevent window manipulation
+            stage.setFullScreen(true); // Always fullscreen
             stage.setFullScreenExitKeyCombination(null);
             stage.setFullScreenExitHint("");
+            
+            // Add fullscreen enforcement listener
+            enforceFullscreenMode(stage);
             
             menuController.setPrimaryStage(stage);
             
@@ -438,6 +447,23 @@ public class SettingsController implements Initializable {
     
     public void setPrimaryStage(Stage stage) {
         this.primaryStage = stage;
+    }
+    
+    /**
+     * Enforce fullscreen mode with listener to prevent exits
+     */
+    private void enforceFullscreenMode(Stage stage) {
+        if (stage != null) {
+            // Add a listener to prevent any attempts to exit fullscreen
+            stage.fullScreenProperty().addListener((obs, wasFullScreen, isNowFullScreen) -> {
+                if (!isNowFullScreen) {
+                    // If someone tries to exit fullscreen, immediately re-enable it
+                    stage.setFullScreen(true);
+                    stage.setFullScreenExitKeyCombination(null);
+                    stage.setFullScreenExitHint("");
+                }
+            });
+        }
     }
 }
 

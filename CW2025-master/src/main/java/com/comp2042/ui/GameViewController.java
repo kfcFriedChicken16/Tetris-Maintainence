@@ -47,7 +47,7 @@ import com.comp2042.menu.MenuController;
 import java.net.URL;
 import java.util.ResourceBundle;
 
-public class GuiController implements Initializable {
+public class GameViewController implements Initializable {
 
     private static final int BRICK_SIZE = 20;
 
@@ -1465,8 +1465,12 @@ public class GuiController implements Initializable {
             
             // Maintain full screen mode
             stage.setFullScreen(true);
+            stage.setResizable(false); // Prevent window manipulation
             stage.setFullScreenExitKeyCombination(null);
             stage.setFullScreenExitHint("");
+            
+            // Add fullscreen enforcement listener
+            enforceFullscreenMode(stage);
             
             // Stop background video
             if (videoManager != null) {
@@ -1518,5 +1522,22 @@ public class GuiController implements Initializable {
         ));
         timeLine.setCycleCount(Timeline.INDEFINITE);
         timeLine.play();
+    }
+    
+    /**
+     * Enforce fullscreen mode with listener to prevent exits
+     */
+    private void enforceFullscreenMode(Stage stage) {
+        if (stage != null) {
+            // Add a listener to prevent any attempts to exit fullscreen
+            stage.fullScreenProperty().addListener((obs, wasFullScreen, isNowFullScreen) -> {
+                if (!isNowFullScreen) {
+                    // If someone tries to exit fullscreen, immediately re-enable it
+                    stage.setFullScreen(true);
+                    stage.setFullScreenExitKeyCombination(null);
+                    stage.setFullScreenExitHint("");
+                }
+            });
+        }
     }
 }

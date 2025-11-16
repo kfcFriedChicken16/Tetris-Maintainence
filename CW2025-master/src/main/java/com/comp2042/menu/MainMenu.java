@@ -30,7 +30,7 @@ public class MainMenu extends MenuBase implements MenuInterface {
     private static final String WINDOW_TITLE = "Tetris - Enhanced Edition";
     private static final int WINDOW_WIDTH = 1200;  // Larger default size
     private static final int WINDOW_HEIGHT = 800;  // Larger default size
-    private static final boolean FULL_SCREEN = true; // Enable full screen mode
+    // Fullscreen is always enabled - no longer configurable
     
     /**
      * Constructor - Encapsulation principle
@@ -63,6 +63,9 @@ public class MainMenu extends MenuBase implements MenuInterface {
         if (primaryStage != null && menuScene != null) {
             primaryStage.setScene(menuScene);
             primaryStage.show();
+            
+            // Force fullscreen after showing - this ensures it works properly
+            enforceFullscreenMode();
         }
     }
     
@@ -111,15 +114,13 @@ public class MainMenu extends MenuBase implements MenuInterface {
      */
     private void configureStage() {
         primaryStage.setTitle(WINDOW_TITLE);
-        primaryStage.setResizable(true); // Allow resizing for full screen
+        primaryStage.setResizable(false); // Prevent window manipulation
         
-        // Enable full screen mode
-        if (FULL_SCREEN) {
-            primaryStage.setFullScreen(true);
-            primaryStage.setFullScreenExitKeyCombination(null);
-            primaryStage.setFullScreenExitHint("");
-            primaryStage.setMaximized(true);
-        }
+        // Enable full screen mode - always enabled, cannot be disabled
+        primaryStage.setFullScreen(true);
+        primaryStage.setFullScreenExitKeyCombination(null);
+        primaryStage.setFullScreenExitHint("");
+        primaryStage.setMaximized(true);
     }
     
     /**
@@ -127,6 +128,28 @@ public class MainMenu extends MenuBase implements MenuInterface {
      */
     private void setupEventHandlers() {
         primaryStage.setOnCloseRequest(e -> cleanup());
+    }
+    
+    /**
+     * Enforce fullscreen mode - called after stage is shown to ensure it works
+     */
+    private void enforceFullscreenMode() {
+        if (primaryStage != null) {
+            // Force fullscreen mode with all protections
+            primaryStage.setResizable(false);
+            primaryStage.setFullScreen(true);
+            primaryStage.setFullScreenExitKeyCombination(null);
+            primaryStage.setFullScreenExitHint("");
+            primaryStage.setMaximized(true);
+            
+            // Add a listener to prevent any attempts to exit fullscreen
+            primaryStage.fullScreenProperty().addListener((obs, wasFullScreen, isNowFullScreen) -> {
+                if (!isNowFullScreen) {
+                    // If someone tries to exit fullscreen, immediately re-enable it
+                    primaryStage.setFullScreen(true);
+                }
+            });
+        }
     }
     
     /**

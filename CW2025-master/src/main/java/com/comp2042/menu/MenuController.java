@@ -20,7 +20,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import com.comp2042.modes.GameMode;
-import com.comp2042.ui.GuiController;
+import com.comp2042.ui.GameViewController;
 import com.comp2042.core.GameController;
 import com.comp2042.managers.SettingsManager;
 
@@ -363,7 +363,7 @@ public class MenuController implements Initializable {
 
     /**
      * Initialize background music for the menu.
-     * TODO: Replace the audio file path with your custom music file
+     * Note: Custom music file can be configured here
      */
     private void initializeBackgroundMusic() {
         try {
@@ -660,7 +660,7 @@ public class MenuController implements Initializable {
             Parent gameRoot = fxmlLoader.load();
             
             // Get the GuiController and start the game
-            GuiController guiController = fxmlLoader.getController();
+            GameViewController guiController = fxmlLoader.getController();
             
             // Get current stage and switch scene
             Stage stage = (Stage) classicBtn.getScene().getWindow();
@@ -668,10 +668,14 @@ public class MenuController implements Initializable {
             stage.setScene(gameScene);
             stage.setTitle("Tetris - " + mode.getDisplayName());
             
-            // Maintain full screen mode
+            // Lock in full screen mode - cannot be exited
+            stage.setResizable(false); // Prevent window manipulation
             stage.setFullScreen(true);
             stage.setFullScreenExitKeyCombination(null);
             stage.setFullScreenExitHint("");
+            
+            // Add fullscreen enforcement listener
+            enforceFullscreenMode(stage);
             
             // Initialize the game controller with selected mode
             new GameController(guiController, mode);
@@ -728,10 +732,14 @@ public class MenuController implements Initializable {
             stage.setScene(settingsScene);
             stage.setTitle("Tetris - Settings");
             
-            SettingsManager settingsManager = SettingsManager.getInstance();
-            stage.setFullScreen(settingsManager.isFullscreen());
+            // Always fullscreen - locked mode
+            stage.setResizable(false); // Prevent window manipulation
+            stage.setFullScreen(true);
             stage.setFullScreenExitKeyCombination(null);
             stage.setFullScreenExitHint("");
+            
+            // Add fullscreen enforcement listener
+            enforceFullscreenMode(stage);
             
             settingsController.setPrimaryStage(stage);
             
@@ -778,16 +786,6 @@ public class MenuController implements Initializable {
         alert.showAndWait();
     }
 
-    /**
-     * Show an error alert dialog
-     */
-    private void showErrorAlert(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Error");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
 
     /**
      * Clean up resources when the menu is closed
@@ -800,6 +798,23 @@ public class MenuController implements Initializable {
         if (backgroundMusic != null) {
             backgroundMusic.stop();
             backgroundMusic.dispose();
+        }
+    }
+    
+    /**
+     * Enforce fullscreen mode with listener to prevent exits
+     */
+    private void enforceFullscreenMode(Stage stage) {
+        if (stage != null) {
+            // Add a listener to prevent any attempts to exit fullscreen
+            stage.fullScreenProperty().addListener((obs, wasFullScreen, isNowFullScreen) -> {
+                if (!isNowFullScreen) {
+                    // If someone tries to exit fullscreen, immediately re-enable it
+                    stage.setFullScreen(true);
+                    stage.setFullScreenExitKeyCombination(null);
+                    stage.setFullScreenExitHint("");
+                }
+            });
         }
     }
 }

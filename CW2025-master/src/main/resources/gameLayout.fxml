@@ -8,7 +8,7 @@
 <?import javafx.scene.media.MediaView?>
 <?import javafx.scene.text.Text?>
 <?import java.net.URL?>
-<StackPane fx:controller="com.comp2042.ui.GuiController"
+<StackPane fx:controller="com.comp2042.ui.GameViewController"
       xmlns:fx="http://javafx.com/fxml">
     
     <!-- Background Video (Bottom Layer) -->

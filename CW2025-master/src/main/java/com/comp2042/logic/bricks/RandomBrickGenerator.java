@@ -42,7 +42,7 @@ public class RandomBrickGenerator implements BrickGenerator {
         
         // Initialize next bricks queue
         nextBricks.add(getWeightedRandomBrick());
-        nextBricks.add(getWeightedRandomBrick());
+        nextBricks.add(getWeightedRandomBrickForQueue());
     }
     
     /**
@@ -144,7 +144,7 @@ public class RandomBrickGenerator implements BrickGenerator {
     @Override
     public Brick getBrick() {
         if (nextBricks.size() <= 1) {
-            nextBricks.add(getWeightedRandomBrick());
+            nextBricks.add(getWeightedRandomBrickForQueue());
         }
         Brick consumed = nextBricks.poll();
         // Track consumed piece in recent pieces (keep only last 3 to prevent 4 in a row)
@@ -166,13 +166,97 @@ public class RandomBrickGenerator implements BrickGenerator {
      * @return The brick at that position, or null if not enough bricks
      */
     public Brick peekNextBrick(int index) {
-        // Ensure we have enough bricks
+        // Ensure we have enough bricks, applying the same constraint logic
         while (nextBricks.size() < index + 1) {
-            nextBricks.add(getWeightedRandomBrick());
+            nextBricks.add(getWeightedRandomBrickForQueue());
         }
         
         // Convert to array to peek at specific index
         Brick[] array = nextBricks.toArray(new Brick[0]);
         return index < array.length ? array[index] : null;
+    }
+    
+    /**
+     * Get a weighted random brick for the queue, considering both recent pieces 
+     * and pieces already in the queue to prevent more than 3 of same type
+     */
+    private Brick getWeightedRandomBrickForQueue() {
+        // Create a combined list of recent pieces + queue pieces to check constraints
+        List<Brick> combinedPieces = new ArrayList<>();
+        combinedPieces.addAll(recentPieces);
+        combinedPieces.addAll(nextBricks);
+        
+        // Check if any brick type would have 3 or more in the combined sequence
+        Class<? extends Brick> excludedType = null;
+        for (Brick brick : brickList) {
+            Class<? extends Brick> brickType = brick.getClass();
+            int consecutiveCount = countConsecutiveAtEnd(combinedPieces, brickType);
+            if (consecutiveCount >= 3) {
+                excludedType = brickType;
+                System.out.println("Brick constraint: Excluding " + brickType.getSimpleName() + 
+                                 " (found " + consecutiveCount + " consecutive)");
+                break;
+            }
+        }
+        
+        // Calculate total weight excluding the blocked type (if any)
+        int weightToUse = totalWeight;
+        if (excludedType != null) {
+            int excludedIndex = getBrickTypeIndex(excludedType);
+            if (excludedIndex >= 0) {
+                weightToUse -= weights.get(excludedIndex);
+            }
+        }
+        
+        // Safety check: if weight becomes invalid, use total weight
+        if (weightToUse <= 0) {
+            weightToUse = totalWeight;
+            excludedType = null;
+        }
+        
+        // Generate random number within the valid weight range
+        int random = ThreadLocalRandom.current().nextInt(weightToUse);
+        int cumulativeWeight = 0;
+        
+        // Select brick based on weighted probability, skipping excluded type
+        for (int i = 0; i < brickList.size(); i++) {
+            // Skip excluded type to prevent more than 3 of same type
+            if (excludedType != null && excludedType.isInstance(brickList.get(i))) {
+                continue;
+            }
+            
+            // Add this brick's weight to cumulative
+            cumulativeWeight += weights.get(i);
+            if (random < cumulativeWeight) {
+                return brickList.get(i);
+            }
+        }
+        
+        // Fallback: return first non-excluded brick
+        for (int i = 0; i < brickList.size(); i++) {
+            if (excludedType == null || !excludedType.isInstance(brickList.get(i))) {
+                return brickList.get(i);
+            }
+        }
+        
+        // Ultimate fallback
+        return brickList.get(0);
+    }
+    
+    /**
+     * Count how many consecutive pieces of the same type appear at the end of the list
+     */
+    private int countConsecutiveAtEnd(List<Brick> pieces, Class<? extends Brick> brickType) {
+        if (pieces.isEmpty()) return 0;
+        
+        int count = 0;
+        for (int i = pieces.size() - 1; i >= 0; i--) {
+            if (brickType.isInstance(pieces.get(i))) {
+                count++;
+            } else {
+                break;
+            }
+        }
+        return count;
     }
 }

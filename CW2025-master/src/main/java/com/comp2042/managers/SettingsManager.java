@@ -38,7 +38,7 @@ public class SettingsManager {
     private boolean sfxEnabled = true;
     
     // Other settings
-    private boolean fullscreen = true;
+    private final boolean fullscreen = true; // Always fullscreen - cannot be changed
     private boolean showGhostPiece = true;
     
     private SettingsManager() {
@@ -84,7 +84,7 @@ public class SettingsManager {
                 sfxEnabled = Boolean.parseBoolean(settings.getProperty("audio.sfxEnabled", "true"));
                 
                 // Load other settings
-                fullscreen = Boolean.parseBoolean(settings.getProperty("display.fullscreen", "true"));
+                // fullscreen is always true - no longer configurable
                 showGhostPiece = Boolean.parseBoolean(settings.getProperty("game.showGhostPiece", "true"));
                 
             } catch (Exception e) {
@@ -123,7 +123,7 @@ public class SettingsManager {
             settings.setProperty("audio.sfxEnabled", String.valueOf(sfxEnabled));
             
             // Save other settings
-            settings.setProperty("display.fullscreen", String.valueOf(fullscreen));
+            // fullscreen is always true - no longer saved to settings
             settings.setProperty("game.showGhostPiece", String.valueOf(showGhostPiece));
             
             settings.store(fos, "Tetris Game Settings");
@@ -188,7 +188,7 @@ public class SettingsManager {
     
     // Getters and setters for other settings
     public boolean isFullscreen() { return fullscreen; }
-    public void setFullscreen(boolean fullscreen) { this.fullscreen = fullscreen; }
+    // setFullscreen removed - fullscreen is always true and cannot be changed
     
     public boolean isShowGhostPiece() { return showGhostPiece; }
     public void setShowGhostPiece(boolean show) { this.showGhostPiece = show; }

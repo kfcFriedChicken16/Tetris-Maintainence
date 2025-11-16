@@ -13,7 +13,7 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SimpleBoard implements Board {
+public class TetrisBoard implements Board {
 
     private final int width;
     private final int height;
@@ -26,7 +26,7 @@ public class SimpleBoard implements Board {
     private Brick heldBrick = null; // Currently held piece
     private boolean canHold = true; // Whether we can hold this turn (prevents multiple holds per piece)
 
-    public SimpleBoard(int width, int height) {
+    public TetrisBoard(int width, int height) {
         this.width = width;
         this.height = height;
         currentGameMatrix = new int[width][height];
