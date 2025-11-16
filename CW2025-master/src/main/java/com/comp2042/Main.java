@@ -6,6 +6,10 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+import com.comp2042.menu.MainMenu;
+import com.comp2042.ui.GuiController;
+import com.comp2042.core.GameController;
+
 import java.net.URL;
 import java.util.ResourceBundle;
 

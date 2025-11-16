@@ -7,7 +7,7 @@
 <?import javafx.scene.text.Font?>
 <?import java.net.URL?>
 
-<StackPane fx:controller="com.comp2042.SettingsController" xmlns:fx="http://javafx.com/fxml" styleClass="menu-background">
+<StackPane fx:controller="com.comp2042.menu.SettingsController" xmlns:fx="http://javafx.com/fxml" styleClass="menu-background">
     
     <!-- Video Background (Full Screen) -->
     <MediaView fx:id="backgroundVideo" preserveRatio="false" 
