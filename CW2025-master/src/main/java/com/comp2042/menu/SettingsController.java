@@ -167,12 +167,20 @@ public class SettingsController implements Initializable {
      */
     private void setupVideoFullScreen() {
         if (backgroundVideo != null && backgroundVideo.getScene() != null) {
+            // Center and size the video properly
+            backgroundVideo.setPreserveRatio(false); // Allow stretching to fill
+            backgroundVideo.setSmooth(true); // Enable smooth scaling
+            
             backgroundVideo.fitWidthProperty().bind(backgroundVideo.getScene().widthProperty());
             backgroundVideo.fitHeightProperty().bind(backgroundVideo.getScene().heightProperty());
             System.out.println("✓ Settings video size bound to scene dimensions - full screen coverage");
         } else {
             // Fallback - set large enough to cover typical screens
             if (backgroundVideo != null) {
+                // Center and size the video properly
+                backgroundVideo.setPreserveRatio(false); // Allow stretching to fill
+                backgroundVideo.setSmooth(true); // Enable smooth scaling
+                
                 backgroundVideo.setFitWidth(1920);
                 backgroundVideo.setFitHeight(1080);
                 System.out.println("✓ Settings video set to large size for full screen coverage (fallback)");

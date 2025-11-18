@@ -40,7 +40,7 @@
         <!-- Menu Buttons (Initially Hidden) -->
         <VBox fx:id="menuButtonsContainer" alignment="CENTER" spacing="20" maxWidth="300" visible="false" managed="false">
             
-            <Button fx:id="singlePlayerBtn" text="Start" onAction="#showModeSelection" styleClass="menu-button">
+            <Button fx:id="singlePlayerBtn" text="Start" onAction="#selectSinglePlayer" styleClass="menu-button">
                 <font>
                     <Font name="Arial Bold" size="16"/>
                 </font>
@@ -58,7 +58,7 @@
                 </effect>
             </Button>
             
-            <Button fx:id="exitBtn" text="Exit Game" onAction="#exitGame" styleClass="menu-button-exit">
+            <Button fx:id="exitBtn" text="Exit Game" onAction="#exitApplication" styleClass="menu-button-exit">
                 <font>
                     <Font name="Arial Bold" size="16"/>
                 </font>

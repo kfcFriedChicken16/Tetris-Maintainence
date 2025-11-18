@@ -70,8 +70,8 @@ public class ModeSelectionController implements Initializable {
             
             Media videoMedia = null;
             
-            // Try loading from resources first
-            URL videoURL = getClass().getClassLoader().getResource("menu_background.mp4");
+            // Try loading from resources first - prioritize audio/menu_background.mp4
+            URL videoURL = getClass().getClassLoader().getResource("audio/menu_background.mp4");
             if (videoURL != null) {
                 try {
                     videoMedia = new Media(videoURL.toString());
@@ -83,7 +83,7 @@ public class ModeSelectionController implements Initializable {
             
             // If not found in resources, try direct file path
             if (videoMedia == null) {
-                String videoPath = "src/main/resources/menu_background.mp4";
+                String videoPath = "src/main/resources/audio/menu_background.mp4";
                 File videoFile = new File(videoPath);
                 if (videoFile.exists()) {
                     try {
@@ -100,6 +100,10 @@ public class ModeSelectionController implements Initializable {
                 backgroundVideoPlayer.setCycleCount(MediaPlayer.INDEFINITE);
                 backgroundVideoPlayer.setMute(true);
                 backgroundVideo.setMediaPlayer(backgroundVideoPlayer);
+                
+                // Center and size the video properly
+                backgroundVideo.setPreserveRatio(false); // Allow stretching to fill
+                backgroundVideo.setSmooth(true); // Enable smooth scaling
                 
                 // Bind video size to scene
                 backgroundVideo.fitWidthProperty().bind(
