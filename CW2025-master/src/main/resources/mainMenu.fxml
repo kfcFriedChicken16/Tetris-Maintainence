@@ -49,6 +49,15 @@
                 </effect>
             </Button>
             
+            <Button fx:id="rpgModeBtn" text="RPG Mode" onAction="#selectRPGMode" styleClass="menu-button">
+                <font>
+                    <Font name="Arial Bold" size="16"/>
+                </font>
+                <effect>
+                    <Glow level="0.3"/>
+                </effect>
+            </Button>
+            
             <Button fx:id="settingsBtn" text="Settings" onAction="#openSettings" styleClass="menu-button">
                 <font>
                     <Font name="Arial Bold" size="16"/>

@@ -218,6 +218,10 @@ public class MenuNavigationManager {
         startGame(GameMode.SURVIVAL);
     }
     
+    public void selectRPGMode(ActionEvent event) {
+        startGame(GameMode.RPG);
+    }
+    
     public void openSettings(ActionEvent event) {
         openSettings();
     }

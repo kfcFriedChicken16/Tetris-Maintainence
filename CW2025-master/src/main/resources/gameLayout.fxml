@@ -95,6 +95,37 @@
         <Label fx:id="survivalHighestLevelLabel" text="1" styleClass="scoreClass"/>
     </VBox>
     
+    <!-- RPG Mode Display (Hidden by default, shown only in RPG mode) -->
+    <VBox fx:id="rpgModeDisplay" layoutX="220" layoutY="150" spacing="5" visible="false" managed="false">
+        <Label text="RPG MODE" styleClass="score-label"/>
+        <Label text="LINES CLEARED: " styleClass="score-label"/>
+        <Label fx:id="rpgLinesClearedLabel" text="0" styleClass="scoreClass"/>
+        <Region prefHeight="10" maxHeight="10" minHeight="10"/>
+        <Label text="CURRENT LEVEL: " styleClass="score-label"/>
+        <Label fx:id="rpgCurrentLevelLabel" text="1" styleClass="scoreClass"/>
+        <Region prefHeight="10" maxHeight="10" minHeight="10"/>
+        <Label text="NEXT LEVEL: " styleClass="score-label"/>
+        <Label fx:id="rpgNextLevelLabel" text="5 lines" styleClass="scoreClass"/>
+        <Region prefHeight="10" maxHeight="10" minHeight="10"/>
+        <Label text="ABILITIES: " styleClass="score-label"/>
+        <HBox spacing="8" alignment="CENTER_LEFT">
+            <Label fx:id="abilitySlot1Label" text="[1] None" styleClass="scoreClass" style="-fx-font-size: 12px;"/>
+            <Label fx:id="abilitySlot1Timer" text="" styleClass="scoreClass" style="-fx-font-size: 12px;"/>
+        </HBox>
+        <HBox spacing="8" alignment="CENTER_LEFT">
+            <Label fx:id="abilitySlot2Label" text="[2] None" styleClass="scoreClass" style="-fx-font-size: 12px;"/>
+            <Label fx:id="abilitySlot2Timer" text="" styleClass="scoreClass" style="-fx-font-size: 12px;"/>
+        </HBox>
+        <HBox spacing="8" alignment="CENTER_LEFT">
+            <Label fx:id="abilitySlot3Label" text="[3] None" styleClass="scoreClass" style="-fx-font-size: 12px;"/>
+            <Label fx:id="abilitySlot3Timer" text="" styleClass="scoreClass" style="-fx-font-size: 12px;"/>
+        </HBox>
+        <HBox spacing="8" alignment="CENTER_LEFT">
+            <Label fx:id="abilitySlot4Label" text="[4] None" styleClass="scoreClass" style="-fx-font-size: 12px;"/>
+            <Label fx:id="abilitySlot4Timer" text="" styleClass="scoreClass" style="-fx-font-size: 12px;"/>
+        </HBox>
+    </VBox>
+    
     <!-- HOLD Panel (Left Side) -->
     <VBox fx:id="holdPanelVBox" layoutX="40" layoutY="60" spacing="10" alignment="TOP_CENTER">
         <Label text="HOLD" styleClass="panel-label"/>
@@ -108,6 +139,31 @@
     </VBox>
     
     </Pane>
+    
+    <!-- RPG Level Up Panel - Full Screen Overlay -->
+    <StackPane fx:id="levelUpGroup" visible="false" managed="false" 
+               style="-fx-background-color: rgba(0,0,0,0.8);" 
+               StackPane.alignment="CENTER" pickOnBounds="true">
+        <VBox alignment="CENTER" spacing="20" 
+              style="-fx-background-color: rgba(30,30,30,0.95); -fx-padding: 40; -fx-border-color: #FFD700; -fx-border-width: 3; -fx-background-radius: 15; -fx-border-radius: 15; -fx-max-width: 500; -fx-max-height: 600;"
+              StackPane.alignment="CENTER">
+            <Label fx:id="levelUpTitle" text="LEVEL UP!" style="-fx-text-fill: #FFD700; -fx-font-size: 48px; -fx-font-weight: bold;"/>
+            <Label text="Choose Your Power:" style="-fx-text-fill: #FFFFFF; -fx-font-size: 20px; -fx-font-weight: bold;"/>
+            
+            <VBox spacing="15" alignment="CENTER">
+                <Button fx:id="clearBottomBtn" text="[1] Clear Bottom 3 Rows" onAction="#selectClearBottom" 
+                        style="-fx-pref-width: 400; -fx-font-size: 18px; -fx-background-color: #FF9800; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8; -fx-pref-height: 50;"/>
+                <Button fx:id="slowTimeBtn" text="[2] Slow Time (10s)" onAction="#selectSlowTime"
+                        style="-fx-pref-width: 400; -fx-font-size: 18px; -fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8; -fx-pref-height: 50;"/>
+                <Button fx:id="colorBombBtn" text="[3] Color Bomb (clear matching color)" onAction="#selectColorBomb"
+                        style="-fx-pref-width: 400; -fx-font-size: 18px; -fx-background-color: #E53935; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8; -fx-pref-height: 50;"/>
+                <Button fx:id="colorSyncBtn" text="[4] Color Sync (combo setup)" onAction="#selectColorSync"
+                        style="-fx-pref-width: 400; -fx-font-size: 18px; -fx-background-color: #8E24AA; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8; -fx-pref-height: 50;"/>
+            </VBox>
+            
+            <Label text="Press 1, 2, 3, or 4 to choose" style="-fx-text-fill: #CCCCCC; -fx-font-size: 14px;"/>
+        </VBox>
+    </StackPane>
     
     <stylesheets>
         <URL value="@window_style.css"/>

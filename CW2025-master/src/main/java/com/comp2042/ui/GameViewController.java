@@ -1,5 +1,7 @@
 package com.comp2042.ui;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.property.IntegerProperty;
 import javafx.event.ActionEvent;
@@ -10,6 +12,7 @@ import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.effect.Reflection;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
@@ -19,6 +22,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.scene.media.MediaView;
+import javafx.util.Duration;
 
 import com.comp2042.events.InputEventListener;
 import com.comp2042.modes.GameMode;
@@ -31,6 +35,7 @@ import com.comp2042.ui.panels.GameOverPanel;
 import com.comp2042.ui.panels.PausePanel;
 import com.comp2042.ui.panels.NotificationPanel;
 import com.comp2042.core.GameStateManager;
+import com.comp2042.core.GameController;
 import com.comp2042.events.MoveEvent;
 import com.comp2042.menu.MenuController;
 
@@ -59,6 +64,12 @@ public class GameViewController implements Initializable {
     
     @FXML
     private Group pauseGroup;
+    
+    @FXML
+    private javafx.scene.layout.StackPane levelUpGroup;
+    
+    @FXML
+    private Button clearBottomBtn;
 
     @FXML
     private BorderPane gameBoard;
@@ -101,6 +112,32 @@ public class GameViewController implements Initializable {
     private javafx.scene.control.Label survivalNextThresholdLabel;
     @FXML
     private javafx.scene.control.Label survivalHighestLevelLabel;
+    
+    // RPG mode UI elements
+    @FXML
+    private javafx.scene.layout.VBox rpgModeDisplay;
+    @FXML
+    private javafx.scene.control.Label rpgLinesClearedLabel;
+    @FXML
+    private javafx.scene.control.Label rpgCurrentLevelLabel;
+    @FXML
+    private javafx.scene.control.Label rpgNextLevelLabel;
+    @FXML
+    private javafx.scene.control.Label abilitySlot1Label;
+    @FXML
+    private javafx.scene.control.Label abilitySlot1Timer;
+    @FXML
+    private javafx.scene.control.Label abilitySlot2Label;
+    @FXML
+    private javafx.scene.control.Label abilitySlot2Timer;
+    @FXML
+    private javafx.scene.control.Label abilitySlot3Label;
+    @FXML
+    private javafx.scene.control.Label abilitySlot3Timer;
+    @FXML
+    private javafx.scene.control.Label abilitySlot4Label;
+    @FXML
+    private javafx.scene.control.Label abilitySlot4Timer;
 
     @FXML
     private javafx.scene.layout.VBox nextPiecesContainer;
@@ -142,6 +179,13 @@ public class GameViewController implements Initializable {
     private GameInputHandler inputHandler;
     private GameAnimationManager animationManager;
     private GameModeManager modeManager;
+    
+    // Slow time ability tracking
+    private Timeline slowModeTimeline;
+    private boolean slowModeActive = false;
+    private int slowModeSecondsRemaining = 0;
+    private long normalDropSpeedMs = 400;
+    private int slowAbilitySlotIndex = -1;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -198,6 +242,20 @@ public class GameViewController implements Initializable {
                 GameViewController.this.refreshBrick(viewData);
                 return viewData;
             }
+            
+            @Override
+            public void selectAbility(String abilityType) {
+                // Forward to GameController
+                if (eventListener instanceof GameController) {
+                    ((GameController) eventListener).selectAbility(abilityType);
+                }
+                hideLevelUpPopup();
+            }
+            
+            @Override
+            public boolean isLevelUpPopupVisible() {
+                return levelUpGroup != null && levelUpGroup.isVisible();
+            }
         });
         
         animationManager = new GameAnimationManager();
@@ -219,7 +277,7 @@ public class GameViewController implements Initializable {
             
             @Override
             public void createAndStartGameTimeline(long speed) {
-                animationManager.createAndStartGameTimeline(speed);
+                GameViewController.this.updateDropSpeed(speed, true);
             }
             
             @Override
@@ -234,6 +292,7 @@ public class GameViewController implements Initializable {
         });
         
         gamePanel.setFocusTraversable(true);
+        resetSlowMode();
         gamePanel.requestFocus();
         gamePanel.setOnKeyPressed(this::handleKeyPressed);
         gameOverPanel.setVisible(false);
@@ -389,7 +448,8 @@ public class GameViewController implements Initializable {
         long initialSpeed = animationManager.getInitialSpeedForMode(currentGameMode, 
                                                                    modeManager.getCurrentSpeedInterval(), 
                                                                    modeManager.getSurvivalSpeedInterval());
-        animationManager.createAndStartGameTimeline(initialSpeed);
+        resetSlowMode();
+        updateDropSpeed(initialSpeed, true);
         
         // Start mode-specific timers
         if (currentGameMode == GameMode.SPRINT) {
@@ -405,6 +465,86 @@ public class GameViewController implements Initializable {
 
     public void refreshGameBackground(int[][] board) {
         uiRenderer.refreshGameBackground(board);
+    }
+    
+    private void updateDropSpeed(long speedMs, boolean treatAsNormal) {
+        if (treatAsNormal) {
+            normalDropSpeedMs = speedMs;
+            if (slowModeActive) {
+                return;
+            }
+        }
+        animationManager.createAndStartGameTimeline(speedMs);
+    }
+    
+    private void resetSlowMode() {
+        if (slowModeTimeline != null) {
+            slowModeTimeline.stop();
+            slowModeTimeline = null;
+        }
+        slowModeActive = false;
+        slowModeSecondsRemaining = 0;
+        updateSlowTimerLabel();
+    }
+    
+    private void updateSlowTimerLabel() {
+        Label[] timerLabels = new Label[]{abilitySlot1Timer, abilitySlot2Timer, abilitySlot3Timer, abilitySlot4Timer};
+        for (Label lbl : timerLabels) {
+            if (lbl != null) {
+                lbl.setText("");
+            }
+        }
+        if (slowAbilitySlotIndex < 0 || slowAbilitySlotIndex >= timerLabels.length) {
+            return;
+        }
+        Label target = timerLabels[slowAbilitySlotIndex];
+        if (target == null) {
+            return;
+        }
+        if (slowModeActive && slowModeSecondsRemaining > 0) {
+            target.setText(slowModeSecondsRemaining + "s");
+        } else {
+            target.setText("Inactive");
+        }
+    }
+    
+    public void activateSlowTime(int durationSeconds) {
+        Platform.runLater(() -> startSlowModeEffect(durationSeconds));
+    }
+    
+    private void startSlowModeEffect(int durationSeconds) {
+        if (durationSeconds <= 0) {
+            return;
+        }
+        if (!slowModeActive) {
+            slowModeActive = true;
+            long slowSpeed = Math.min(normalDropSpeedMs * 2, normalDropSpeedMs + 400);
+            updateDropSpeed(slowSpeed, false);
+        } else if (slowModeTimeline != null) {
+            slowModeTimeline.stop();
+        }
+        slowModeSecondsRemaining = durationSeconds;
+        updateSlowTimerLabel();
+        slowModeTimeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
+            slowModeSecondsRemaining--;
+            updateSlowTimerLabel();
+            if (slowModeSecondsRemaining <= 0) {
+                endSlowModeEffect();
+            }
+        }));
+        slowModeTimeline.setCycleCount(durationSeconds);
+        slowModeTimeline.play();
+    }
+    
+    private void endSlowModeEffect() {
+        if (slowModeTimeline != null) {
+            slowModeTimeline.stop();
+            slowModeTimeline = null;
+        }
+        slowModeActive = false;
+        slowModeSecondsRemaining = 0;
+        updateSlowTimerLabel();
+        updateDropSpeed(normalDropSpeedMs, false);
     }
 
     private void moveDown(MoveEvent event) {
@@ -505,6 +645,7 @@ public class GameViewController implements Initializable {
         setModeDisplayVisibility(sprintModeDisplay, mode == GameMode.SPRINT);
         setModeDisplayVisibility(ultraModeDisplay, mode == GameMode.ULTRA);
         setModeDisplayVisibility(survivalModeDisplay, mode == GameMode.SURVIVAL);
+        setModeDisplayVisibility(rpgModeDisplay, mode == GameMode.RPG);
     }
     
     /**
@@ -529,6 +670,111 @@ public class GameViewController implements Initializable {
      */
     public void updateSprintLines(int linesCleared) {
         modeManager.updateSprintLines(linesCleared);
+    }
+    
+    /**
+     * Update RPG mode display (called from GameController after lines are cleared)
+     */
+    public void updateRPGDisplay(int totalLinesCleared, int currentLevel, int linesToNextLevel,
+                                 String slot1Text, String slot2Text, String slot3Text, String slot4Text,
+                                 int slowAbilitySlotIndex) {
+        if (rpgLinesClearedLabel != null) {
+            rpgLinesClearedLabel.setText(String.valueOf(totalLinesCleared));
+        }
+        if (rpgCurrentLevelLabel != null) {
+            rpgCurrentLevelLabel.setText(String.valueOf(currentLevel));
+        }
+        if (rpgNextLevelLabel != null) {
+            rpgNextLevelLabel.setText(linesToNextLevel + " lines");
+        }
+        if (abilitySlot1Label != null) {
+            abilitySlot1Label.setText(slot1Text);
+        }
+        if (abilitySlot2Label != null) {
+            abilitySlot2Label.setText(slot2Text);
+        }
+        if (abilitySlot3Label != null) {
+            abilitySlot3Label.setText(slot3Text);
+        }
+        if (abilitySlot4Label != null) {
+            abilitySlot4Label.setText(slot4Text);
+        }
+        this.slowAbilitySlotIndex = slowAbilitySlotIndex;
+        updateSlowTimerLabel();
+    }
+    
+    /**
+     * Show the level-up popup for ability selection
+     */
+    public void showLevelUpPopup() {
+        System.out.println("showLevelUpPopup() called");
+        if (levelUpGroup != null) {
+            System.out.println("levelUpGroup found, making visible");
+            levelUpGroup.setVisible(true);
+            levelUpGroup.setManaged(true);
+            // Pause the game when level-up popup appears
+            gameStateManager.setPaused(true);
+            System.out.println("Level-up popup should now be visible!");
+        } else {
+            System.out.println("ERROR: levelUpGroup is null!");
+        }
+    }
+    
+    /**
+     * Hide the level-up popup and resume game
+     */
+    public void hideLevelUpPopup() {
+        if (levelUpGroup != null) {
+            levelUpGroup.setVisible(false);
+            levelUpGroup.setManaged(false);
+            // Resume the game
+            gameStateManager.setPaused(false);
+        }
+    }
+    
+    /**
+     * Handle Clear Bottom ability selection
+     */
+    @FXML
+    private void selectClearBottom() {
+        // Notify GameController of ability selection
+        if (eventListener instanceof GameController) {
+            ((GameController) eventListener).selectAbility("CLEAR_BOTTOM_3");
+        }
+        hideLevelUpPopup();
+    }
+    
+    /**
+     * Handle Slow Time ability selection
+     */
+    @FXML
+    private void selectSlowTime() {
+        if (eventListener instanceof GameController) {
+            ((GameController) eventListener).selectAbility("SLOW_TIME");
+        }
+        hideLevelUpPopup();
+    }
+    
+    /**
+     * Handle Color Bomb ability selection
+     */
+    @FXML
+    private void selectColorBomb() {
+        if (eventListener instanceof GameController) {
+            ((GameController) eventListener).selectAbility("COLOR_BOMB");
+        }
+        hideLevelUpPopup();
+    }
+    
+    /**
+     * Handle Color Sync ability selection
+     */
+    @FXML
+    private void selectColorSync() {
+        if (eventListener instanceof GameController) {
+            ((GameController) eventListener).selectAbility("COLOR_SYNC");
+        }
+        hideLevelUpPopup();
     }
     
     /**
@@ -592,7 +838,8 @@ public class GameViewController implements Initializable {
         long initialSpeed = animationManager.getInitialSpeedForMode(currentGameMode, 
                                                                    modeManager.getCurrentSpeedInterval(), 
                                                                    modeManager.getSurvivalSpeedInterval());
-        animationManager.createAndStartGameTimeline(initialSpeed);
+        resetSlowMode();
+        updateDropSpeed(initialSpeed, true);
         
         gameStateManager.reset();
         

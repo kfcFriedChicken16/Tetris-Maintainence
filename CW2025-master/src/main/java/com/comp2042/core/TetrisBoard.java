@@ -11,12 +11,13 @@ import com.comp2042.utils.MatrixOperations;
 
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class TetrisBoard implements Board {
 
-    private final int width;
-    private final int height;
+    private final int rows;
+    private final int cols;
     private final BrickGenerator brickGenerator;
     private final BrickRotator brickRotator;
     private int[][] currentGameMatrix;
@@ -26,10 +27,10 @@ public class TetrisBoard implements Board {
     private Brick heldBrick = null; // Currently held piece
     private boolean canHold = true; // Whether we can hold this turn (prevents multiple holds per piece)
 
-    public TetrisBoard(int width, int height) {
-        this.width = width;
-        this.height = height;
-        currentGameMatrix = new int[width][height];
+    public TetrisBoard(int rows, int cols) {
+        this.rows = rows;
+        this.cols = cols;
+        currentGameMatrix = new int[rows][cols];
         brickGenerator = new RandomBrickGenerator();
         brickRotator = new BrickRotator();
         score = new Score();
@@ -250,6 +251,115 @@ public class TetrisBoard implements Board {
     public int getTotalLinesCleared() {
         return totalLinesCleared;
     }
+    
+    /**
+     * Clear the bottom N rows and drop everything above down.
+     * @param numRows number of bottom rows to remove
+     * @return true if any blocks were removed, false otherwise
+     */
+    public boolean clearBottomRows(int numRows) {
+        if (numRows <= 0) {
+            return false;
+        }
+        
+        int rowsToRemove = Math.min(numRows, rows);
+        int[][] newMatrix = new int[rows][cols];
+        int destinationRow = rows - 1;
+        boolean anyBlocksCleared = false;
+
+        for (int sourceRow = rows - 1; sourceRow >= 0; sourceRow--) {
+            boolean removeThisRow = (rows - 1 - sourceRow) < rowsToRemove;
+
+            if (removeThisRow) {
+                boolean hasBlocks = false;
+                for (int col = 0; col < cols; col++) {
+                    if (currentGameMatrix[sourceRow][col] != 0) {
+                        hasBlocks = true;
+                        break;
+                    }
+                }
+
+                if (hasBlocks) {
+                    anyBlocksCleared = true;
+                    score.add(100);
+                    totalLinesCleared++;
+                }
+            } else {
+                System.arraycopy(currentGameMatrix[sourceRow], 0, newMatrix[destinationRow], 0, cols);
+                destinationRow--;
+            }
+        }
+
+        // Fill remaining rows (if any) at the top with zeros
+        while (destinationRow >= 0) {
+            Arrays.fill(newMatrix[destinationRow], 0);
+            destinationRow--;
+        }
+
+        currentGameMatrix = newMatrix;
+        System.out.println("✅ Cleared bottom " + rowsToRemove + " rows. Blocks dropped down.");
+        return anyBlocksCleared;
+    }
+    
+    @Override
+    public int clearColorBlocks(int colorValue) {
+        if (colorValue <= 0) {
+            return 0;
+        }
+        int removedCount = 0;
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
+                if (currentGameMatrix[row][col] == colorValue) {
+                    currentGameMatrix[row][col] = 0;
+                    removedCount++;
+                }
+            }
+        }
+        if (removedCount > 0) {
+            collapseColumns();
+            score.add(removedCount * 50);
+        }
+        return removedCount;
+    }
+    
+    @Override
+    public int convertAllBlocksToColor(int colorValue) {
+        if (colorValue <= 0) {
+            return 0;
+        }
+        int changed = 0;
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
+                if (currentGameMatrix[row][col] != 0 && currentGameMatrix[row][col] != colorValue) {
+                    currentGameMatrix[row][col] = colorValue;
+                    changed++;
+                }
+            }
+        }
+        return changed;
+    }
+    
+    /**
+     * Apply gravity so that columns collapse downward after removals.
+     */
+    private void collapseColumns() {
+        for (int col = 0; col < cols; col++) {
+            int writeRow = rows - 1;
+            for (int row = rows - 1; row >= 0; row--) {
+                int cell = currentGameMatrix[row][col];
+                if (cell != 0) {
+                    currentGameMatrix[writeRow][col] = cell;
+                    if (writeRow != row) {
+                        currentGameMatrix[row][col] = 0;
+                    }
+                    writeRow--;
+                }
+            }
+            for (int row = writeRow; row >= 0; row--) {
+                currentGameMatrix[row][col] = 0;
+            }
+        }
+    }
 
     @Override
     public Score getScore() {
@@ -259,7 +369,7 @@ public class TetrisBoard implements Board {
 
     @Override
     public void newGame() {
-        currentGameMatrix = new int[width][height];
+        currentGameMatrix = new int[rows][cols];
         score.reset();
         totalLinesCleared = 0; // Reset lines cleared counter
         heldBrick = null; // Clear held piece

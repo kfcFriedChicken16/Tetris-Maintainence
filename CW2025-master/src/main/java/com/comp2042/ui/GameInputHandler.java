@@ -28,6 +28,8 @@ public class GameInputHandler {
         void moveDown(MoveEvent event);
         void hardDrop(MoveEvent event);
         ViewData refreshBrick(ViewData viewData);
+        void selectAbility(String abilityType);
+        boolean isLevelUpPopupVisible();
     }
     
     private GameActionCallback gameActionCallback;
@@ -66,11 +68,61 @@ public class GameInputHandler {
             }
         }
         
+        // Level-up popup controls (check before pause)
+        if (gameActionCallback.isLevelUpPopupVisible()) {
+            if (keyCode == KeyCode.DIGIT1) {
+                gameActionCallback.selectAbility("CLEAR_BOTTOM_3");
+                keyEvent.consume();
+                return;
+            } else if (keyCode == KeyCode.DIGIT2) {
+                gameActionCallback.selectAbility("SLOW_TIME");
+                keyEvent.consume();
+                return;
+            } else if (keyCode == KeyCode.DIGIT3) {
+                gameActionCallback.selectAbility("COLOR_BOMB");
+                keyEvent.consume();
+                return;
+            } else if (keyCode == KeyCode.DIGIT4) {
+                gameActionCallback.selectAbility("COLOR_SYNC");
+                keyEvent.consume();
+                return;
+            }
+        }
+        
         // Pause key toggles pause (only when not game over)
         if (keyCode == settings.getPause() && !gameStateManager.isGameOver()) {
             gameActionCallback.togglePause();
             keyEvent.consume();
             return;
+        }
+        
+        // Ability usage controls (during normal gameplay, not paused, not game over)
+        if (!gameStateManager.isPaused() && !gameStateManager.isGameOver()) {
+            if (keyCode == KeyCode.DIGIT1) {
+                if (eventListener instanceof com.comp2042.core.GameController) {
+                    ((com.comp2042.core.GameController) eventListener).useAbility(0); // Slot 1
+                }
+                keyEvent.consume();
+                return;
+            } else if (keyCode == KeyCode.DIGIT2) {
+                if (eventListener instanceof com.comp2042.core.GameController) {
+                    ((com.comp2042.core.GameController) eventListener).useAbility(1); // Slot 2
+                }
+                keyEvent.consume();
+                return;
+            } else if (keyCode == KeyCode.DIGIT3) {
+                if (eventListener instanceof com.comp2042.core.GameController) {
+                    ((com.comp2042.core.GameController) eventListener).useAbility(2); // Slot 3
+                }
+                keyEvent.consume();
+                return;
+            } else if (keyCode == KeyCode.DIGIT4) {
+                if (eventListener instanceof com.comp2042.core.GameController) {
+                    ((com.comp2042.core.GameController) eventListener).useAbility(3); // Slot 4
+                }
+                keyEvent.consume();
+                return;
+            }
         }
         
         // Normal game controls (only when not paused and not game over)
@@ -111,6 +163,14 @@ public class GameInputHandler {
         // Restart key (for quick restart during gameplay)
         if (keyCode == settings.getRestart() && !gameStateManager.isGameOver()) {
             gameActionCallback.newGame();
+            keyEvent.consume();
+        }
+        
+        // DEBUG: Press T to test level-up popup (temporary for debugging)
+        if (keyCode == KeyCode.T && !gameStateManager.isGameOver()) {
+            if (eventListener instanceof com.comp2042.core.GameController) {
+                ((com.comp2042.core.GameController) eventListener).testLevelUpPopup();
+            }
             keyEvent.consume();
         }
     }
