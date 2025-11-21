@@ -28,6 +28,11 @@ import com.comp2042.events.InputEventListener;
 import com.comp2042.modes.GameMode;
 import com.comp2042.models.ViewData;
 import com.comp2042.models.DownData;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import com.comp2042.managers.ScoreManager;
 import com.comp2042.managers.AudioManager;
 import com.comp2042.managers.VideoManager;
@@ -70,6 +75,12 @@ public class GameViewController implements Initializable {
     
     @FXML
     private Button clearBottomBtn;
+    @FXML
+    private Button slowTimeBtn;
+    @FXML
+    private Button colorBombBtn;
+    @FXML
+    private Button colorSyncBtn;
 
     @FXML
     private BorderPane gameBoard;
@@ -186,6 +197,9 @@ public class GameViewController implements Initializable {
     private int slowModeSecondsRemaining = 0;
     private long normalDropSpeedMs = 400;
     private int slowAbilitySlotIndex = -1;
+    
+    // Random ability selection for level-up
+    private String[] currentLevelUpAbilities = new String[3]; // Stores the 3 random abilities shown
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -250,6 +264,15 @@ public class GameViewController implements Initializable {
                     ((GameController) eventListener).selectAbility(abilityType);
                 }
                 hideLevelUpPopup();
+            }
+            
+            @Override
+            public void selectAbility(int shortcut) {
+                // Get the ability type for this keyboard shortcut
+                String abilityType = getAbilityForShortcut(shortcut);
+                if (abilityType != null) {
+                    selectAbility(abilityType);
+                }
             }
             
             @Override
@@ -475,6 +498,14 @@ public class GameViewController implements Initializable {
             }
         }
         animationManager.createAndStartGameTimeline(speedMs);
+    }
+    
+    /**
+     * Update game speed for RPG mode (called when leveling up)
+     * @param speedMs new drop interval in milliseconds
+     */
+    public void updateRPGSpeed(long speedMs) {
+        updateDropSpeed(speedMs, true);
     }
     
     private void resetSlowMode() {
@@ -704,12 +735,29 @@ public class GameViewController implements Initializable {
     }
     
     /**
-     * Show the level-up popup for ability selection
+     * Show the level-up popup for ability selection with 3 random abilities
      */
     public void showLevelUpPopup() {
         System.out.println("showLevelUpPopup() called");
         if (levelUpGroup != null) {
-            System.out.println("levelUpGroup found, making visible");
+            // Randomly select 3 abilities from the 4 available
+            String[] allAbilities = {"CLEAR_BOTTOM_3", "SLOW_TIME", "COLOR_BOMB", "COLOR_SYNC"};
+            List<String> abilityList = new ArrayList<>(Arrays.asList(allAbilities));
+            Collections.shuffle(abilityList);
+            
+            // Take first 3 abilities
+            currentLevelUpAbilities[0] = abilityList.get(0);
+            currentLevelUpAbilities[1] = abilityList.get(1);
+            currentLevelUpAbilities[2] = abilityList.get(2);
+            
+            System.out.println("Random abilities selected: " + 
+                currentLevelUpAbilities[0] + ", " + 
+                currentLevelUpAbilities[1] + ", " + 
+                currentLevelUpAbilities[2]);
+            
+            // Update button visibility and labels
+            updateAbilityButtons();
+            
             levelUpGroup.setVisible(true);
             levelUpGroup.setManaged(true);
             // Pause the game when level-up popup appears
@@ -718,6 +766,70 @@ public class GameViewController implements Initializable {
         } else {
             System.out.println("ERROR: levelUpGroup is null!");
         }
+    }
+    
+    /**
+     * Update ability buttons to show only the 3 randomly selected abilities
+     * Buttons are always labeled [1], [2], [3] in sequential order from top to bottom
+     * The abilities themselves are randomly selected, but displayed in sequential order
+     */
+    private void updateAbilityButtons() {
+        // Hide all buttons first
+        if (clearBottomBtn != null) clearBottomBtn.setVisible(false);
+        if (slowTimeBtn != null) slowTimeBtn.setVisible(false);
+        if (colorBombBtn != null) colorBombBtn.setVisible(false);
+        if (colorSyncBtn != null) colorSyncBtn.setVisible(false);
+        
+        // Buttons in display order (top to bottom) - use first 3 buttons from FXML
+        Button[] displayButtons = {clearBottomBtn, slowTimeBtn, colorBombBtn};
+        
+        // Assign the 3 randomly selected abilities to buttons in sequential order [1], [2], [3]
+        for (int i = 0; i < 3; i++) {
+            String ability = currentLevelUpAbilities[i];
+            Button button = displayButtons[i]; // Use buttons in FXML order
+            int buttonNumber = i + 1; // Always sequential: 1, 2, 3
+            
+            // Set the button text based on ability type
+            String buttonText = "";
+            switch (ability) {
+                case "CLEAR_BOTTOM_3":
+                    buttonText = "[" + buttonNumber + "] Clear Bottom 3 Rows";
+                    break;
+                case "SLOW_TIME":
+                    buttonText = "[" + buttonNumber + "] Slow Time (10s)";
+                    break;
+                case "COLOR_BOMB":
+                    buttonText = "[" + buttonNumber + "] Color Bomb (clear matching color)";
+                    break;
+                case "COLOR_SYNC":
+                    buttonText = "[" + buttonNumber + "] Color Sync (combo setup)";
+                    break;
+            }
+            
+            if (button != null) {
+                button.setVisible(true);
+                button.setText(buttonText);
+                
+                // Update the button's onAction to call the correct ability
+                // We need to update the action handler dynamically
+                button.setOnAction(e -> {
+                    if (eventListener instanceof GameController) {
+                        ((GameController) eventListener).selectAbility(ability);
+                    }
+                    hideLevelUpPopup();
+                });
+            }
+        }
+    }
+    
+    /**
+     * Get the ability type for a given keyboard shortcut (1, 2, or 3)
+     */
+    public String getAbilityForShortcut(int shortcut) {
+        if (shortcut >= 1 && shortcut <= 3) {
+            return currentLevelUpAbilities[shortcut - 1];
+        }
+        return null;
     }
     
     /**
@@ -791,6 +903,40 @@ public class GameViewController implements Initializable {
     public void ultraComplete() {
         modeManager.ultraComplete(gameOverPanel, gameBoard, scoreLabel);
         gamePanel.requestFocus();
+    }
+    
+    /**
+     * RPG mode completed - player reached level 40!
+     */
+    public void rpgComplete(int totalLinesCleared, int finalLevel) {
+        // Stop game timeline
+        animationManager.stopTimeline();
+        
+        // Set game over state
+        gameStateManager.setGameOver(true);
+        
+        // Show congratulations message
+        gameOverPanel.setVisible(true);
+        gameOverPanel.setGameOverMessage("HOORAY!");
+        
+        // Show completion info
+        String infoText = "You successfully completed RPG Mode!";
+        String statsText = "Final Level: " + finalLevel + " | Lines Cleared: " + totalLinesCleared;
+        gameOverPanel.setTimeInfo(infoText, statsText);
+        
+        // Center the game over panel on screen
+        Parent parent = gameBoard.getParent();
+        if (parent instanceof Pane) {
+            centerGameOverPanel((Pane) parent);
+        }
+        
+        // Play completion sound
+        audioManager.playLineClearSound();
+        
+        // Ensure focus is on gamePanel
+        Platform.runLater(() -> {
+            gamePanel.requestFocus();
+        });
     }
 
     public void gameOver() {

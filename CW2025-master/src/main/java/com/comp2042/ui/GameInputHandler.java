@@ -29,6 +29,7 @@ public class GameInputHandler {
         void hardDrop(MoveEvent event);
         ViewData refreshBrick(ViewData viewData);
         void selectAbility(String abilityType);
+        void selectAbility(int shortcut); // For keyboard shortcuts (1, 2, 3)
         boolean isLevelUpPopupVisible();
     }
     
@@ -71,19 +72,15 @@ public class GameInputHandler {
         // Level-up popup controls (check before pause)
         if (gameActionCallback.isLevelUpPopupVisible()) {
             if (keyCode == KeyCode.DIGIT1) {
-                gameActionCallback.selectAbility("CLEAR_BOTTOM_3");
+                gameActionCallback.selectAbility(1);
                 keyEvent.consume();
                 return;
             } else if (keyCode == KeyCode.DIGIT2) {
-                gameActionCallback.selectAbility("SLOW_TIME");
+                gameActionCallback.selectAbility(2);
                 keyEvent.consume();
                 return;
             } else if (keyCode == KeyCode.DIGIT3) {
-                gameActionCallback.selectAbility("COLOR_BOMB");
-                keyEvent.consume();
-                return;
-            } else if (keyCode == KeyCode.DIGIT4) {
-                gameActionCallback.selectAbility("COLOR_SYNC");
+                gameActionCallback.selectAbility(3);
                 keyEvent.consume();
                 return;
             }

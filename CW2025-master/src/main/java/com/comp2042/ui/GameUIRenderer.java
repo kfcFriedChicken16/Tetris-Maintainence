@@ -110,6 +110,9 @@ public class GameUIRenderer {
             case 7:
                 returnPaint = Color.BURLYWOOD;
                 break;
+            case 8:
+                returnPaint = Color.GRAY; // Grey for garbage blocks
+                break;
             default:
                 returnPaint = Color.WHITE;
                 break;

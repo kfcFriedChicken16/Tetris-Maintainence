@@ -164,33 +164,180 @@ public class GameController implements InputEventListener {
     
     /**
      * Check RPG mode progression and update display.
-     * Level up every 5 lines cleared.
+     * Level progression: 
+     * - Levels 1-5: 10 lines per level
+     * - Levels 6-10: 15 lines per level
+     * - Levels 11-20: 20 lines per level
+     * - Levels 21-30: 25 lines per level
+     * - Levels 31-40: 30 lines per level
      */
     private void checkRPGProgression(ClearRow clearRow) {
         if (currentMode == GameMode.RPG && clearRow != null) {
             int totalLinesCleared = board.getTotalLinesCleared();
-            int newLevel = (totalLinesCleared / 5) + 1;
+            
+            // Calculate level based on lines cleared
+            // Levels 1-5: 10 lines each = 50 lines total for level 6
+            // Levels 6-10: 15 lines each = 50 + 75 = 125 lines total for level 11
+            // Levels 11-20: 20 lines each = 125 + 200 = 325 lines total for level 21
+            // Levels 21-30: 25 lines each = 325 + 250 = 575 lines total for level 31
+            // Levels 31-40: 30 lines each = 575 + 300 = 875 lines total for level 41
+            int newLevel = calculateLevelFromLines(totalLinesCleared);
             
             // Check if player leveled up
             if (newLevel > rpgLevel) {
+                int oldLevel = rpgLevel;
                 rpgLevel = newLevel;
                 System.out.println("=== RPG LEVEL UP! ===");
                 System.out.println("Lines cleared: " + totalLinesCleared);
-                System.out.println("Old level: " + (rpgLevel - 1) + " -> New level: " + rpgLevel);
+                System.out.println("Old level: " + oldLevel + " -> New level: " + rpgLevel);
+                
+                // Check if player reached level 40 (RPG completion!)
+                if (rpgLevel == 40) {
+                    System.out.println("🎉 CONGRATULATIONS! Player reached level 40!");
+                    // Show congratulations screen with final stats
+                    viewGuiController.rpgComplete(totalLinesCleared, rpgLevel);
+                    return; // Don't show level-up popup, show completion instead
+                }
+                
+                // Update game speed based on new level
+                updateRPGSpeed(rpgLevel);
+                
+                // Spawn garbage blocks as difficulty increases (skip level 1)
+                if (rpgLevel > 1) {
+                    spawnGarbageBlocksForLevel(rpgLevel);
+                }
+                
                 System.out.println("Showing level-up popup...");
                 // Show level up popup for ability selection
                 viewGuiController.showLevelUpPopup();
+            } else {
+                // Also update speed when level doesn't change (in case speed tier changed)
+                updateRPGSpeed(rpgLevel);
             }
             
             refreshRPGHud();
         }
     }
     
+    /**
+     * Calculate RPG level from total lines cleared.
+     * Level 1-5: 10 lines per level (Level 6 needs 50 lines total)
+     * Level 6-10: 15 lines per level (Level 11 needs 125 lines total)
+     * Level 11-20: 20 lines per level (Level 21 needs 325 lines total)
+     * Level 21-30: 25 lines per level (Level 31 needs 575 lines total)
+     * Level 31-40: 30 lines per level (Level 41 needs 875 lines total)
+     */
+    private int calculateLevelFromLines(int totalLinesCleared) {
+        if (totalLinesCleared < 10) {
+            return 1; // Level 1: 0-9 lines
+        }
+        
+        // Levels 1-5: 10 lines each (total 50 lines for level 6)
+        if (totalLinesCleared < 50) {
+            return (totalLinesCleared / 10) + 1; // Level 2-5
+        }
+        
+        // Levels 6-10: 15 lines each (after 50 lines, need 75 more = 125 total for level 11)
+        int linesAfter50 = totalLinesCleared - 50;
+        if (linesAfter50 < 75) {
+            return 6 + (linesAfter50 / 15); // Level 6-10
+        }
+        
+        // Levels 11-20: 20 lines each (after 125 lines, need 200 more = 325 total for level 21)
+        int linesAfter125 = totalLinesCleared - 125;
+        if (linesAfter125 < 200) {
+            return 11 + (linesAfter125 / 20); // Level 11-20
+        }
+        
+        // Levels 21-30: 25 lines each (after 325 lines, need 250 more = 575 total for level 31)
+        int linesAfter325 = totalLinesCleared - 325;
+        if (linesAfter325 < 250) {
+            return 21 + (linesAfter325 / 25); // Level 21-30
+        }
+        
+        // Levels 31-40: 30 lines each (after 575 lines, need 300 more = 875 total for level 41)
+        int linesAfter575 = totalLinesCleared - 575;
+        if (linesAfter575 < 300) {
+            return 31 + (linesAfter575 / 30); // Level 31-40
+        }
+        
+        // Level 41+: Continue with 30 lines per level
+        return 41 + ((totalLinesCleared - 875) / 30);
+    }
+    
+    /**
+     * Update game speed based on RPG level.
+     * Speed tiers based on level ranges:
+     * - Levels 1-3 (first 3 levels): 400ms
+     * - Levels 4-9 (next 6 levels): 365ms
+     * - Levels 10-18 (next 9 levels): 330ms
+     * - Levels 19-30 (next 12 levels): 295ms
+     * - Levels 31+ (next 12 each): continues decreasing by 35ms per tier
+     * Minimum speed: 50ms
+     */
+    private void updateRPGSpeed(int level) {
+        long newSpeed = 400; // Default/base speed
+        
+        if (level <= 3) {
+            // First 3 levels: 400ms
+            newSpeed = 400;
+        } else if (level <= 9) {
+            // Next 6 levels (4-9): 365ms
+            newSpeed = 365;
+        } else if (level <= 18) {
+            // Next 9 levels (10-18): 330ms
+            newSpeed = 330;
+        } else if (level <= 30) {
+            // Next 12 levels (19-30): 295ms
+            newSpeed = 295;
+        } else {
+            // Levels 31+: Continue pattern, each 12 levels reduces by 35ms
+            // Tier 5: 31-42 (260ms), Tier 6: 43-54 (225ms), etc.
+            int tier = 4 + ((level - 18) / 12); // Tier 4 was 19-30, so tier 5 starts at 31
+            newSpeed = 400 - (tier * 35);
+            // Ensure minimum speed of 50ms
+            newSpeed = Math.max(newSpeed, 50);
+        }
+        
+        System.out.println("⚡ Speed updated! Drop interval: " + newSpeed + "ms (Level " + level + ")");
+        
+        // Update the game speed through the view controller
+        if (viewGuiController != null) {
+            viewGuiController.updateRPGSpeed(newSpeed);
+        }
+    }
+    
+    /**
+     * Spawn garbage brick shapes based on current RPG level.
+     * Difficulty scales every 5 levels: more bricks at higher level ranges.
+     * Levels 1-5: 3 bricks, Levels 6-10: 5 bricks, Levels 11-15: 7 bricks, Levels 16-20: 9 bricks, etc.
+     */
+    private void spawnGarbageBlocksForLevel(int level) {
+        // Calculate number of garbage brick shapes to spawn based on level range
+        // Every 5 levels, increase by 2 bricks
+        // Levels 1-5: 3 bricks
+        // Levels 6-10: 5 bricks
+        // Levels 11-15: 7 bricks
+        // Levels 16-20: 9 bricks
+        // And so on...
+        int levelRange = (level - 1) / 5; // 0 for levels 1-5, 1 for 6-10, 2 for 11-15, etc.
+        int numBricks = 3 + (levelRange * 2); // Start at 3, add 2 per range
+        numBricks = Math.min(numBricks, 15); // Cap at 15 bricks per level (reasonable max)
+        
+        int spawned = board.spawnGarbageBlocks(numBricks, level);
+        if (spawned > 0) {
+            // Refresh the display to show new garbage blocks
+            viewGuiController.refreshGameBackground(board.getBoardMatrix());
+            System.out.println("⚠️ Difficulty increased! " + numBricks + " garbage brick shapes (" + spawned + " total blocks) spawned.");
+        }
+    }
+    
     private void refreshRPGHud() {
         if (currentMode == GameMode.RPG && viewGuiController != null) {
             int totalLinesCleared = board.getTotalLinesCleared();
-            int remainder = totalLinesCleared % 5;
-            int linesToNextLevel = remainder == 0 ? 5 : 5 - remainder;
+            // Calculate lines needed for next level
+            int linesRequiredForNextLevel = calculateLinesRequiredForLevel(rpgLevel + 1);
+            int linesToNextLevel = Math.max(0, linesRequiredForNextLevel - totalLinesCleared);
             viewGuiController.updateRPGDisplay(
                     totalLinesCleared,
                     rpgLevel,
@@ -202,6 +349,43 @@ public class GameController implements InputEventListener {
                     getSlowAbilitySlotIndex()
             );
         }
+    }
+    
+    /**
+     * Calculate total lines required to reach a specific level.
+     * Level 1-5: 10 lines each (Level 6 needs 50 lines total)
+     * Level 6-10: 15 lines each (Level 11 needs 125 lines total)
+     * Level 11-20: 20 lines each (Level 21 needs 325 lines total)
+     * Level 21-30: 25 lines each (Level 31 needs 575 lines total)
+     * Level 31-40: 30 lines each (Level 41 needs 875 lines total)
+     */
+    private int calculateLinesRequiredForLevel(int targetLevel) {
+        if (targetLevel <= 1) {
+            return 0; // Level 1 starts at 0 lines
+        }
+        if (targetLevel <= 6) {
+            // Levels 1-5: 10 lines each
+            return (targetLevel - 1) * 10;
+        }
+        if (targetLevel <= 11) {
+            // Levels 6-10: 15 lines each (50 base + 15 per level after 5)
+            return 50 + (targetLevel - 6) * 15;
+        }
+        if (targetLevel <= 21) {
+            // Levels 11-20: 20 lines each (125 base + 20 per level after 10)
+            return 125 + (targetLevel - 11) * 20;
+        }
+        if (targetLevel <= 31) {
+            // Levels 21-30: 25 lines each (325 base + 25 per level after 20)
+            return 325 + (targetLevel - 21) * 25;
+        }
+        if (targetLevel <= 41) {
+            // Levels 31-40: 30 lines each (575 base + 30 per level after 30)
+            return 575 + (targetLevel - 31) * 30;
+        }
+        
+        // Level 41+: Continue with 30 lines per level
+        return 875 + (targetLevel - 41) * 30;
     }
     
     private AbilityType mapAbilityType(String abilityName) {
@@ -223,12 +407,16 @@ public class GameController implements InputEventListener {
         if (type == AbilityType.NONE) {
             return;
         }
+        // First, check if this ability type already exists in a slot
         for (int i = 0; i < abilitySlots.length; i++) {
-            AbilityType existing = abilitySlots[i];
-            if (existing == type) {
+            if (abilitySlots[i] == type) {
+                // Ability already in a slot, don't add it again
                 return;
             }
-            if (existing == AbilityType.NONE) {
+        }
+        // If not found, find the first empty slot and assign it there
+        for (int i = 0; i < abilitySlots.length; i++) {
+            if (abilitySlots[i] == AbilityType.NONE) {
                 abilitySlots[i] = type;
                 return;
             }

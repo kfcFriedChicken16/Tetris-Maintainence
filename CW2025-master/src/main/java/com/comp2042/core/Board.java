@@ -55,4 +55,13 @@ public interface Board {
      * @return number of blocks that were changed
      */
     int convertAllBlocksToColor(int colorValue);
+    
+    /**
+     * Spawn random garbage blocks at the bottom of the board.
+     * Used in RPG mode to increase difficulty as levels progress.
+     * @param numBlocks number of garbage blocks to spawn
+     * @param level current RPG level (affects spawn pattern)
+     * @return number of blocks actually spawned
+     */
+    int spawnGarbageBlocks(int numBlocks, int level);
 }

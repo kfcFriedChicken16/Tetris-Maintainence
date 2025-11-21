@@ -13,6 +13,7 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 
 public class TetrisBoard implements Board {
 
@@ -375,5 +376,117 @@ public class TetrisBoard implements Board {
         heldBrick = null; // Clear held piece
         canHold = true; // Reset hold ability
         createNewBrick();
+    }
+    
+    /**
+     * Spawn random garbage brick shapes that drop from the top and land on existing blocks.
+     * Complete brick shapes (I, O, T, S, Z, J, L) fall down and stack on top of existing blocks.
+     * @param numBlocks number of garbage bricks to spawn (each brick is a complete shape)
+     * @param level current RPG level (affects spawn pattern)
+     * @return number of blocks actually spawned (counts individual blocks in each brick)
+     */
+    @Override
+    public int spawnGarbageBlocks(int numBlocks, int level) {
+        if (numBlocks <= 0) {
+            return 0;
+        }
+        
+        // SAFETY CHECK: Find the highest occupied row
+        int highestOccupiedRow = rows;
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
+                if (currentGameMatrix[row][col] != 0) {
+                    highestOccupiedRow = row;
+                    break;
+                }
+            }
+            if (highestOccupiedRow < rows) {
+                break;
+            }
+        }
+        
+        // If blocks are already too high (above row 10), don't add more to prevent game over
+        if (highestOccupiedRow < 10) {
+            System.out.println("⚠️ Board is too high (row " + highestOccupiedRow + "), skipping garbage block spawn to prevent game over");
+            return 0;
+        }
+        
+        int totalBlocksSpawned = 0;
+        Random random = new Random();
+        
+        // Add complete brick shapes horizontally as rows
+        // numBlocks represents how many brick shapes to place horizontally
+        for (int brickNum = 0; brickNum < numBlocks; brickNum++) {
+            // Generate a random brick shape
+            Brick randomBrick = brickGenerator.getBrick();
+            List<int[][]> brickShapes = randomBrick.getShapeMatrix();
+            
+            // Pick a random rotation (some will be horizontal, some vertical)
+            int[][] brickShape = brickShapes.get(random.nextInt(brickShapes.size()));
+            
+            // Convert brick shape to grey (color 8)
+            int[][] greyBrickShape = new int[brickShape.length][brickShape[0].length];
+            for (int i = 0; i < brickShape.length; i++) {
+                for (int j = 0; j < brickShape[i].length; j++) {
+                    if (brickShape[i][j] != 0) {
+                        greyBrickShape[i][j] = 8; // Grey color for garbage
+                    }
+                }
+            }
+            
+            // Calculate which row to place this brick (above the highest existing block)
+            int targetRow = highestOccupiedRow - 1 - (brickNum / 2); // Place 2 bricks per row
+            
+            // Make sure we're not placing in the top 4 rows (leave space for new pieces)
+            if (targetRow < 4) {
+                System.out.println("⚠️ Skipping brick placement - row " + targetRow + " too high");
+                continue;
+            }
+            
+            // Find a random X position to place the brick horizontally
+            int brickWidth = greyBrickShape[0].length;
+            int maxX = cols - brickWidth;
+            if (maxX < 0) {
+                maxX = 0; // Brick is wider than board, try anyway
+            }
+            int spawnX = random.nextInt(Math.max(1, maxX + 1));
+            
+            // Check if brick would fit at this position (horizontally in the row)
+            boolean canPlace = true;
+            for (int i = 0; i < greyBrickShape.length; i++) {
+                for (int j = 0; j < greyBrickShape[i].length; j++) {
+                    if (greyBrickShape[i][j] != 0) {
+                        int targetCol = spawnX + i;
+                        int targetRowForBlock = targetRow + j;
+                        if (targetCol >= cols || targetRowForBlock >= rows || targetRowForBlock < 0) {
+                            canPlace = false;
+                            break;
+                        }
+                        if (currentGameMatrix[targetRowForBlock][targetCol] != 0) {
+                            canPlace = false;
+                            break;
+                        }
+                    }
+                }
+                if (!canPlace) break;
+            }
+            
+            // Place the brick shape horizontally if it fits
+            if (canPlace) {
+                for (int i = 0; i < greyBrickShape.length; i++) {
+                    for (int j = 0; j < greyBrickShape[i].length; j++) {
+                        if (greyBrickShape[i][j] != 0) {
+                            int targetCol = spawnX + i;
+                            int targetRowForBlock = targetRow + j;
+                            currentGameMatrix[targetRowForBlock][targetCol] = 8; // Grey color
+                            totalBlocksSpawned++;
+                        }
+                    }
+                }
+            }
+        }
+        
+        System.out.println("🗑️ Added " + numBlocks + " complete brick shapes horizontally (" + totalBlocksSpawned + " total blocks) at level " + level);
+        return totalBlocksSpawned;
     }
 }

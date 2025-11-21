@@ -161,7 +161,7 @@
                         style="-fx-pref-width: 400; -fx-font-size: 18px; -fx-background-color: #8E24AA; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8; -fx-pref-height: 50;"/>
             </VBox>
             
-            <Label text="Press 1, 2, 3, or 4 to choose" style="-fx-text-fill: #CCCCCC; -fx-font-size: 14px;"/>
+            <Label fx:id="levelUpInstructionLabel" text="Press 1, 2, or 3 to choose" style="-fx-text-fill: #CCCCCC; -fx-font-size: 14px;"/>
         </VBox>
     </StackPane>
     

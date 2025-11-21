@@ -41,6 +41,8 @@ public class GameAnimationManager {
             return currentSpeedInterval; // Ultra mode: starts at 400ms
         } else if (currentGameMode == GameMode.SURVIVAL) {
             return survivalSpeedInterval; // Survival mode: starts at 400ms, increases with score
+        } else if (currentGameMode == GameMode.RPG) {
+            return 400; // RPG mode: starts at 400ms, increases with level
         }
         return 400; // Default for Classic mode
     }
