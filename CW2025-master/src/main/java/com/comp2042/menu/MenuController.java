@@ -182,7 +182,6 @@ public class MenuController implements Initializable {
     @FXML
     private void selectRPGMode(ActionEvent event) {
         // For now, we'll start with Classic mode but with RPG features enabled
-        // TODO: Implement proper RPG mode selection
         navigationManager.selectRPGMode(event);
     }
 
