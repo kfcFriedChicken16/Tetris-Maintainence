@@ -330,6 +330,8 @@ public class GameController implements InputEventListener {
                 System.out.println("Using ability: Clear 3 Rows (charges left before use: " + abilityManager.getClearRowsCharges() + ")");
                 rpgModeManager.executeClearBottom3Rows(board);
                 viewGuiController.refreshGameBackground(board.getBoardMatrix());
+                // Play clear rows sound effect when Clear Bottom 3 Rows ability is used
+                viewGuiController.playClearRowsSound();
                 abilityManager.decrementClearRowsCharges();
                 if (abilityManager.getClearRowsCharges() == 0) {
                     abilityManager.removeAbilityFromSlots(AbilityType.CLEAR_ROWS);
@@ -359,6 +361,8 @@ public class GameController implements InputEventListener {
                 if (removed > 0) {
                     viewGuiController.refreshGameBackground(board.getBoardMatrix());
                     System.out.println("💥 Color Bomb removed " + removed + " blocks");
+                    // Play combo sound effect when Color Bomb is successfully used
+                    viewGuiController.playComboSound();
                 } else {
                     System.out.println("Color Bomb found no matching blocks on the board.");
                 }
@@ -377,6 +381,8 @@ public class GameController implements InputEventListener {
                 if (changed > 0) {
                     viewGuiController.refreshGameBackground(board.getBoardMatrix());
                     System.out.println("🎨 Color Sync aligned " + changed + " blocks");
+                    // Play color sync sound effect when Color Sync is successfully used
+                    viewGuiController.playColorSyncSound();
                 } else {
                     System.out.println("Color Sync found no blocks to update.");
                 }

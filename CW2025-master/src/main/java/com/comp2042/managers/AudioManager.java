@@ -18,6 +18,9 @@ public class AudioManager {
     private MediaPlayer hardDropSound;
     private MediaPlayer lineClearSound;
     private MediaPlayer gameOverSound;
+    private MediaPlayer comboSound;
+    private MediaPlayer colorSyncSound;
+    private MediaPlayer clearRowsSound;
     
     // Background music
     private MediaPlayer gameplayBackgroundMusic;
@@ -75,6 +78,32 @@ public class AudioManager {
                 "audio/game_over.mp3",
                 "audio/gameover.mp3"
             }, "gameOver");
+            
+            // Try to load combo sound (for Color Bomb ability)
+            loadSoundEffect(new String[]{
+                "combo.mp3",
+                "audio/combo.mp3",
+                "combo.wav",
+                "audio/combo.wav"
+            }, "combo");
+            
+            // Try to load color sync sound (for Color Sync ability)
+            loadSoundEffect(new String[]{
+                "color_sync.wav",
+                "audio/color_sync.wav",
+                "color_sync.mp3",
+                "audio/color_sync.mp3"
+            }, "colorSync");
+            
+            // Try to load clear rows sound (for Clear Bottom 3 Rows ability)
+            loadSoundEffect(new String[]{
+                "clear3lines.wav",
+                "audio/clear3lines.wav",
+                "clear3lines.mp3",
+                "audio/clear3lines.mp3",
+                "clear_rows.wav",
+                "audio/clear_rows.wav"
+            }, "clearRows");
             
             System.out.println("✓ Sound effects initialization complete");
         } catch (Exception e) {
@@ -139,6 +168,15 @@ public class AudioManager {
                     break;
                 case "gameOver":
                     gameOverSound = soundPlayer;
+                    break;
+                case "combo":
+                    comboSound = soundPlayer;
+                    break;
+                case "colorSync":
+                    colorSyncSound = soundPlayer;
+                    break;
+                case "clearRows":
+                    clearRowsSound = soundPlayer;
                     break;
             }
             
@@ -289,6 +327,27 @@ public class AudioManager {
         }
     }
     
+    public void playComboSound() {
+        if (comboSound != null && settings.isSfxEnabled()) {
+            comboSound.seek(Duration.ZERO);
+            comboSound.play();
+        }
+    }
+    
+    public void playColorSyncSound() {
+        if (colorSyncSound != null && settings.isSfxEnabled()) {
+            colorSyncSound.seek(Duration.ZERO);
+            colorSyncSound.play();
+        }
+    }
+    
+    public void playClearRowsSound() {
+        if (clearRowsSound != null && settings.isSfxEnabled()) {
+            clearRowsSound.seek(Duration.ZERO);
+            clearRowsSound.play();
+        }
+    }
+    
     // Background music control methods
     public void setBackgroundMusicVolume(double volume) {
         if (gameplayBackgroundMusic != null) {
@@ -331,6 +390,18 @@ public class AudioManager {
         if (gameplayBackgroundMusic != null) {
             gameplayBackgroundMusic.stop();
             gameplayBackgroundMusic.dispose();
+        }
+        if (comboSound != null) {
+            comboSound.stop();
+            comboSound.dispose();
+        }
+        if (colorSyncSound != null) {
+            colorSyncSound.stop();
+            colorSyncSound.dispose();
+        }
+        if (clearRowsSound != null) {
+            clearRowsSound.stop();
+            clearRowsSound.dispose();
         }
     }
 }

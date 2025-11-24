@@ -1193,4 +1193,31 @@ public class GameViewController implements Initializable {
             });
         }
     }
+    
+    /**
+     * Play combo sound effect (for Color Bomb ability)
+     */
+    public void playComboSound() {
+        if (audioManager != null) {
+            audioManager.playComboSound();
+        }
+    }
+    
+    /**
+     * Play color sync sound effect (for Color Sync ability)
+     */
+    public void playColorSyncSound() {
+        if (audioManager != null) {
+            audioManager.playColorSyncSound();
+        }
+    }
+    
+    /**
+     * Play clear rows sound effect (for Clear Bottom 3 Rows ability)
+     */
+    public void playClearRowsSound() {
+        if (audioManager != null) {
+            audioManager.playClearRowsSound();
+        }
+    }
 }
