@@ -11,6 +11,14 @@ import com.comp2042.modes.GameMode;
 import com.comp2042.rpg.RPGModeManager;
 import com.comp2042.rpg.AbilityType;
 
+/**
+ * Main game controller that coordinates game logic and user input.
+ * Handles all game events including piece movement, rotation, and game mode-specific logic
+ * such as Sprint mode completion and RPG mode progression.
+ * 
+ * @author Phung Yu Jie
+ * @version 1.0
+ */
 public class GameController implements InputEventListener {
 
     private Board board = new TetrisBoard(25, 10);
@@ -21,10 +29,23 @@ public class GameController implements InputEventListener {
     // RPG Mode manager (only initialized in RPG mode)
     private RPGModeManager rpgModeManager;
 
+    /**
+     * Constructs a GameController with the default Classic game mode.
+     * 
+     * @param c The GameViewController to coordinate with for UI updates
+     */
     public GameController(GameViewController c) {
         this(c, GameMode.CLASSIC); // Default to Classic mode for backward compatibility
     }
     
+    /**
+     * Constructs a GameController with the specified game mode.
+     * Initializes the game board, sets up event listeners, and configures
+     * mode-specific managers such as RPGModeManager for RPG mode.
+     * 
+     * @param c The GameViewController to coordinate with for UI updates
+     * @param mode The game mode to initialize (Classic, Sprint, Ultra, Survival, or RPG)
+     */
     public GameController(GameViewController c, GameMode mode) {
         viewGuiController = c;
         currentMode = mode;
@@ -46,10 +67,23 @@ public class GameController implements InputEventListener {
         }
     }
     
+    /**
+     * Gets the current game mode.
+     * 
+     * @return The current GameMode (Classic, Sprint, Ultra, Survival, or RPG)
+     */
     public GameMode getCurrentMode() {
         return currentMode;
     }
 
+    /**
+     * Handles the down movement event for the current piece.
+     * Moves the piece down one row, handles line clearing, and checks for
+     * game mode completion conditions (Sprint mode) or progression (RPG mode).
+     * 
+     * @param event The move event containing information about the movement source
+     * @return DownData containing information about cleared rows and updated view data
+     */
     @Override
     public DownData onDownEvent(MoveEvent event) {
         boolean canMove = board.moveBrickDown();
@@ -83,24 +117,51 @@ public class GameController implements InputEventListener {
         return new DownData(clearRow, board.getViewData());
     }
 
+    /**
+     * Handles the left movement event for the current piece.
+     * 
+     * @param event The move event containing information about the movement source
+     * @return ViewData containing the updated game view after the move
+     */
     @Override
     public ViewData onLeftEvent(MoveEvent event) {
         board.moveBrickLeft();
         return board.getViewData();
     }
 
+    /**
+     * Handles the right movement event for the current piece.
+     * 
+     * @param event The move event containing information about the movement source
+     * @return ViewData containing the updated game view after the move
+     */
     @Override
     public ViewData onRightEvent(MoveEvent event) {
         board.moveBrickRight();
         return board.getViewData();
     }
 
+    /**
+     * Handles the rotation event for the current piece.
+     * Rotates the piece counter-clockwise (left rotation).
+     * 
+     * @param event The move event containing information about the movement source
+     * @return ViewData containing the updated game view after the rotation
+     */
     @Override
     public ViewData onRotateEvent(MoveEvent event) {
         board.rotateLeftBrick();
         return board.getViewData();
     }
 
+    /**
+     * Handles the hard drop event, instantly dropping the piece to the bottom.
+     * Awards bonus points based on the drop distance and handles line clearing
+     * and game mode progression.
+     * 
+     * @param event The move event containing information about the movement source
+     * @return DownData containing information about cleared rows and updated view data
+     */
     @Override
     public DownData onHardDropEvent(MoveEvent event) {
         // Hard drop the piece and get bonus points
@@ -135,8 +196,11 @@ public class GameController implements InputEventListener {
     }
     
     /**
-     * Check if Sprint mode completion condition is met (40 lines cleared).
-     * Returns true if game should end, false otherwise.
+     * Checks if Sprint mode completion condition is met (40 lines cleared).
+     * Updates the UI with current line count and triggers completion if goal is reached.
+     * 
+     * @param clearRow The ClearRow object containing information about recently cleared lines
+     * @return true if Sprint mode is complete (40 lines cleared), false otherwise
      */
     private boolean checkSprintCompletion(ClearRow clearRow) {
         if (currentMode == GameMode.SPRINT) {
@@ -151,13 +215,16 @@ public class GameController implements InputEventListener {
     }
     
     /**
-     * Check RPG mode progression and update display.
-     * Level progression: 
+     * Checks RPG mode progression and updates the display.
+     * Calculates level based on total lines cleared and triggers level-up events.
+     * Level progression tiers:
      * - Levels 1-5: 10 lines per level
      * - Levels 6-10: 15 lines per level
      * - Levels 11-20: 20 lines per level
      * - Levels 21-30: 25 lines per level
      * - Levels 31-40: 30 lines per level
+     * 
+     * @param clearRow The ClearRow object containing information about recently cleared lines
      */
     private void checkRPGProgression(ClearRow clearRow) {
         if (currentMode == GameMode.RPG && clearRow != null && rpgModeManager != null) {
@@ -208,14 +275,16 @@ public class GameController implements InputEventListener {
     }
     
     /**
-     * Update game speed based on RPG level.
-     * Speed tiers based on level ranges:
-     * - Levels 1-3 (first 3 levels): 400ms
-     * - Levels 4-9 (next 6 levels): 365ms
-     * - Levels 10-18 (next 9 levels): 330ms
-     * - Levels 19-30 (next 12 levels): 295ms
-     * - Levels 31+ (next 12 each): continues decreasing by 35ms per tier
-     * Minimum speed: 50ms
+     * Updates game speed based on RPG level.
+     * Speed increases (drop interval decreases) as level increases.
+     * Speed tiers:
+     * - Levels 1-3: 400ms drop interval
+     * - Levels 4-9: 365ms drop interval
+     * - Levels 10-18: 330ms drop interval
+     * - Levels 19-30: 295ms drop interval
+     * - Levels 31+: continues decreasing by 35ms per tier (minimum 50ms)
+     * 
+     * @param level The current RPG level
      */
     private void updateRPGSpeed(int level) {
         if (rpgModeManager == null) return;
@@ -231,9 +300,10 @@ public class GameController implements InputEventListener {
     }
     
     /**
-     * Spawn garbage brick shapes based on current RPG level.
-     * Difficulty scales every 5 levels: more bricks at higher level ranges.
-     * Levels 1-5: 3 bricks, Levels 6-10: 5 bricks, Levels 11-15: 7 bricks, Levels 16-20: 9 bricks, etc.
+     * Spawns garbage brick shapes based on current RPG level to increase difficulty.
+     * The number of garbage blocks spawned scales with level progression.
+     * 
+     * @param level The current RPG level that determines spawn difficulty
      */
     private void spawnGarbageBlocksForLevel(int level) {
         if (rpgModeManager == null) return;
@@ -246,6 +316,10 @@ public class GameController implements InputEventListener {
         }
     }
     
+    /**
+     * Refreshes the RPG mode HUD display with current level, lines cleared, and ability information.
+     * Updates the view controller with all RPG-related statistics.
+     */
     private void refreshRPGHud() {
         if (currentMode == GameMode.RPG && viewGuiController != null && rpgModeManager != null) {
             int totalLinesCleared = board.getTotalLinesCleared();
@@ -268,7 +342,7 @@ public class GameController implements InputEventListener {
     }
     
     /**
-     * TEST METHOD: Force show level-up popup (for debugging)
+     * Test method to force show level-up popup (for debugging purposes).
      */
     public void testLevelUpPopup() {
         System.out.println("=== TESTING LEVEL UP POPUP ===");
@@ -276,7 +350,10 @@ public class GameController implements InputEventListener {
     }
     
     /**
-     * Handle ability selection from level-up popup
+     * Handles ability selection from the level-up popup.
+     * Increments the charge count for the selected ability and assigns it to an available slot.
+     * 
+     * @param abilityType The string name of the ability type to select
      */
     public void selectAbility(String abilityType) {
         if (rpgModeManager == null) return;
@@ -307,7 +384,11 @@ public class GameController implements InputEventListener {
     }
     
     /**
-     * Use ability from specific slot (0-4 for slots 1-5)
+     * Uses an ability from the specified slot.
+     * Executes the ability effect and decrements its charge count.
+     * Removes the ability from slots when charges are depleted.
+     * 
+     * @param slotIndex The slot index (0-4) corresponding to ability slots 1-5
      */
     public void useAbility(int slotIndex) {
         if (currentMode != GameMode.RPG || rpgModeManager == null) return;
@@ -400,6 +481,11 @@ public class GameController implements InputEventListener {
         refreshRPGHud();
     }
 
+    /**
+     * Handles the hold event, allowing the player to swap the current piece with the held piece.
+     * 
+     * @return ViewData containing the updated game view after holding/swapping the piece
+     */
     @Override
     public ViewData onHoldEvent() {
         boolean success = board.holdBrick();
@@ -410,6 +496,10 @@ public class GameController implements InputEventListener {
         return board.getViewData();
     }
 
+    /**
+     * Resets the game to start a new game.
+     * Clears the board, resets the score, and reinitializes mode-specific managers.
+     */
     @Override
     public void createNewGame() {
         board.newGame();

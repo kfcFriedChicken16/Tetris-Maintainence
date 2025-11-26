@@ -12,7 +12,12 @@ import java.io.PrintWriter;
 /**
  * Manages score persistence and tracking for all game modes.
  * Handles loading/saving scores to files and updating UI displays.
+ * Supports Classic mode (highest score), Sprint mode (best time), 
+ * Ultra mode (best score), and Survival mode (highest level).
  * This class simplifies score management by centralizing file I/O operations.
+ * 
+ * @author Phung Yu Jie
+ * @version 1.0
  */
 public class ScoreManager {
     
@@ -42,7 +47,13 @@ public class ScoreManager {
     }
     
     /**
-     * Set UI labels for score display (optional)
+     * Sets UI labels for score display (optional).
+     * Updates all displays after setting the labels.
+     * 
+     * @param highestScoreLabel Label for displaying highest Classic mode score
+     * @param sprintBestTimeLabel Label for displaying Sprint mode best time
+     * @param ultraBestScoreLabel Label for displaying Ultra mode best score
+     * @param survivalHighestLevelLabel Label for displaying Survival mode highest level
      */
     public void setLabels(Label highestScoreLabel, Label sprintBestTimeLabel, 
                          Label ultraBestScoreLabel, Label survivalHighestLevelLabel) {
@@ -131,11 +142,21 @@ public class ScoreManager {
         }
     }
     
-    // Highest Score methods
+    /**
+     * Gets the highest score achieved in Classic mode.
+     * 
+     * @return The highest score value
+     */
     public int getHighestScore() {
         return highestScore;
     }
     
+    /**
+     * Updates the highest score if the new score is greater.
+     * Saves to file and updates the display.
+     * 
+     * @param newScore The new score to check against the current highest
+     */
     public void updateHighestScore(int newScore) {
         if (newScore > highestScore) {
             highestScore = newScore;
@@ -152,11 +173,22 @@ public class ScoreManager {
         }
     }
     
-    // Sprint Best Time methods
+    /**
+     * Gets the best time achieved in Sprint mode (in milliseconds).
+     * Returns Long.MAX_VALUE if no time has been recorded.
+     * 
+     * @return The best time in milliseconds, or Long.MAX_VALUE if no record exists
+     */
     public long getSprintBestTime() {
         return sprintBestTime;
     }
     
+    /**
+     * Updates the Sprint best time if the new time is faster.
+     * Saves to file and updates the display.
+     * 
+     * @param newTime The new time in milliseconds to check against the current best
+     */
     public void updateSprintBestTime(long newTime) {
         if (newTime < sprintBestTime) {
             sprintBestTime = newTime;
@@ -177,11 +209,21 @@ public class ScoreManager {
         }
     }
     
-    // Ultra Best Score methods
+    /**
+     * Gets the best score achieved in Ultra mode.
+     * 
+     * @return The best Ultra mode score
+     */
     public int getUltraBestScore() {
         return ultraBestScore;
     }
     
+    /**
+     * Updates the Ultra best score if the new score is greater.
+     * Saves to file and updates the display.
+     * 
+     * @param newScore The new score to check against the current best
+     */
     public void updateUltraBestScore(int newScore) {
         if (newScore > ultraBestScore) {
             ultraBestScore = newScore;
@@ -198,11 +240,21 @@ public class ScoreManager {
         }
     }
     
-    // Survival Highest Level methods
+    /**
+     * Gets the highest level reached in Survival mode.
+     * 
+     * @return The highest level achieved
+     */
     public int getSurvivalHighestLevel() {
         return survivalHighestLevel;
     }
     
+    /**
+     * Updates the Survival highest level if the new level is greater.
+     * Saves to file and updates the display.
+     * 
+     * @param newLevel The new level to check against the current highest
+     */
     public void updateSurvivalHighestLevel(int newLevel) {
         if (newLevel > survivalHighestLevel) {
             survivalHighestLevel = newLevel;
@@ -220,7 +272,8 @@ public class ScoreManager {
     }
     
     /**
-     * Update all score displays
+     * Updates all score displays in the UI.
+     * Refreshes all label values on the JavaFX application thread.
      */
     public void updateAllDisplays() {
         updateHighestScoreDisplay();
@@ -230,8 +283,11 @@ public class ScoreManager {
     }
     
     /**
-     * Format time in milliseconds to MM:SS format
-     * Made public static so it can be used by other classes
+     * Formats time in milliseconds to MM:SS format.
+     * Made public static so it can be used by other classes.
+     * 
+     * @param milliseconds The time in milliseconds to format
+     * @return A formatted string in MM:SS format
      */
     public static String formatTime(long milliseconds) {
         long totalSeconds = milliseconds / 1000;

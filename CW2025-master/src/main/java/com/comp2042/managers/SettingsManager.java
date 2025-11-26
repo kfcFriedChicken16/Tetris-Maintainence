@@ -7,7 +7,11 @@ import java.util.Properties;
 
 /**
  * Manages game settings including key bindings, audio, and other preferences.
- * Settings are persisted to a properties file.
+ * Settings are persisted to a properties file and loaded on startup.
+ * Uses singleton pattern to ensure consistent settings across the application.
+ * 
+ * @author Phung Yu Jie
+ * @version 1.0
  */
 public class SettingsManager {
     
@@ -46,6 +50,12 @@ public class SettingsManager {
         loadSettings();
     }
     
+    /**
+     * Gets the singleton instance of SettingsManager.
+     * Creates a new instance if one doesn't exist.
+     * 
+     * @return The SettingsManager instance
+     */
     public static SettingsManager getInstance() {
         if (instance == null) {
             instance = new SettingsManager();
@@ -54,7 +64,8 @@ public class SettingsManager {
     }
     
     /**
-     * Load settings from file, or use defaults if file doesn't exist
+     * Loads settings from file, or uses defaults if file doesn't exist.
+     * Reads key bindings, audio settings, and other preferences from the properties file.
      */
     private void loadSettings() {
         File settingsFile = new File(SETTINGS_FILE);
@@ -95,7 +106,8 @@ public class SettingsManager {
     }
     
     /**
-     * Save current settings to file
+     * Saves current settings to the properties file.
+     * Persists all key bindings, audio settings, and preferences.
      */
     public void saveSettings() {
         try (FileOutputStream fos = new FileOutputStream(SETTINGS_FILE)) {

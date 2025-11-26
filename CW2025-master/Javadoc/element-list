@@ -1,0 +1,15 @@
+com.comp2042
+com.comp2042.core
+com.comp2042.events
+com.comp2042.logic.bricks
+com.comp2042.managers
+com.comp2042.menu
+com.comp2042.models
+com.comp2042.modes
+com.comp2042.rpg
+com.comp2042.rpg.ability
+com.comp2042.rpg.config
+com.comp2042.rpg.progression
+com.comp2042.ui
+com.comp2042.ui.panels
+com.comp2042.utils

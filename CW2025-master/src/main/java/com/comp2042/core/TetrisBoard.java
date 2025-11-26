@@ -15,6 +15,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
+/**
+ * Implementation of the Board interface for Tetris game logic.
+ * Manages the game board state, piece movement, rotation, line clearing,
+ * and special features such as hold piece, ghost piece, and garbage block spawning.
+ * 
+ * @author Phung Yu Jie
+ * @version 1.0
+ */
 public class TetrisBoard implements Board {
 
     private final int rows;
@@ -28,6 +36,12 @@ public class TetrisBoard implements Board {
     private Brick heldBrick = null; // Currently held piece
     private boolean canHold = true; // Whether we can hold this turn (prevents multiple holds per piece)
 
+    /**
+     * Constructs a new TetrisBoard with the specified dimensions.
+     * 
+     * @param rows The number of rows in the game board
+     * @param cols The number of columns in the game board
+     */
     public TetrisBoard(int rows, int cols) {
         this.rows = rows;
         this.cols = cols;
@@ -168,7 +182,9 @@ public class TetrisBoard implements Board {
     }
     
     /**
-     * Get the currently held piece (for display)
+     * Gets the currently held piece for display purposes.
+     * 
+     * @return The Brick object that is currently held, or null if no piece is held
      */
     public Brick getHeldBrick() {
         return heldBrick;
@@ -247,15 +263,20 @@ public class TetrisBoard implements Board {
     }
     
     /**
-     * Get total lines cleared (for Sprint mode)
+     * Gets the total number of lines cleared since the game started.
+     * Used for tracking progress in Sprint mode and RPG mode.
+     * 
+     * @return The total number of lines cleared
      */
     public int getTotalLinesCleared() {
         return totalLinesCleared;
     }
     
     /**
-     * Clear the bottom N rows and drop everything above down.
-     * @param numRows number of bottom rows to remove
+     * Clears the bottom N rows and drops all blocks above down.
+     * Used by RPG abilities to clear rows from the bottom.
+     * 
+     * @param numRows The number of bottom rows to remove
      * @return true if any blocks were removed, false otherwise
      */
     public boolean clearBottomRows(int numRows) {
@@ -341,7 +362,8 @@ public class TetrisBoard implements Board {
     }
     
     /**
-     * Apply gravity so that columns collapse downward after removals.
+     * Applies gravity to make columns collapse downward after block removals.
+     * Moves all non-zero blocks down to fill empty spaces in each column.
      */
     private void collapseColumns() {
         for (int col = 0; col < cols; col++) {

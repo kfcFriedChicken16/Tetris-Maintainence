@@ -1,38 +1,27 @@
 package com.comp2042.ui;
 
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.property.IntegerProperty;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Group;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.effect.Reflection;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
+import javafx.scene.media.MediaView;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
-import javafx.scene.media.MediaView;
-import javafx.util.Duration;
 
 import com.comp2042.events.InputEventListener;
 import com.comp2042.modes.GameMode;
 import com.comp2042.models.ViewData;
 import com.comp2042.models.DownData;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import com.comp2042.managers.ScoreManager;
 import com.comp2042.managers.AudioManager;
 import com.comp2042.managers.VideoManager;
@@ -42,7 +31,6 @@ import com.comp2042.ui.panels.NotificationPanel;
 import com.comp2042.core.GameStateManager;
 import com.comp2042.core.GameController;
 import com.comp2042.events.MoveEvent;
-import com.comp2042.menu.MenuController;
 
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -190,16 +178,10 @@ public class GameViewController implements Initializable {
     private GameInputHandler inputHandler;
     private GameAnimationManager animationManager;
     private GameModeManager modeManager;
-    
-    // Slow time ability tracking
-    private Timeline slowModeTimeline;
-    private boolean slowModeActive = false;
-    private int slowModeSecondsRemaining = 0;
-    private long normalDropSpeedMs = 400;
-    private int slowAbilitySlotIndex = -1;
-    
-    // Random ability selection for level-up
-    private String[] currentLevelUpAbilities = new String[3]; // Stores the 3 random abilities shown
+    private GameLayoutManager layoutManager;
+    private SlowTimeManager slowTimeManager;
+    private RPGLevelUpManager rpgLevelUpManager;
+    private GameMenuNavigator menuNavigator;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -223,6 +205,22 @@ public class GameViewController implements Initializable {
         
         // Initialize extracted components
         uiRenderer = new GameUIRenderer(gamePanel, brickPanel, ghostPanel, nextPiecesContainer, holdPieceContainer);
+        
+        // Initialize layout manager
+        layoutManager = new GameLayoutManager(gameBoard, brickPanel, ghostPanel, groupNotification, 
+                                             pauseGroup, holdPanelVBox, nextPanelVBox);
+        
+        // Initialize slow time manager
+        slowTimeManager = new SlowTimeManager(abilitySlot1Timer, abilitySlot2Timer, 
+                                              abilitySlot3Timer, abilitySlot4Timer,
+                                              this::updateDropSpeed);
+        
+        // Initialize RPG level-up manager
+        rpgLevelUpManager = new RPGLevelUpManager(levelUpGroup, clearBottomBtn, slowTimeBtn,
+                                                 colorBombBtn, colorSyncBtn, gameStateManager);
+        
+        // Initialize menu navigator
+        menuNavigator = new GameMenuNavigator(audioManager, videoManager);
         
         inputHandler = new GameInputHandler(gameStateManager);
         inputHandler.setGameActionCallback(new GameInputHandler.GameActionCallback() {
@@ -263,13 +261,13 @@ public class GameViewController implements Initializable {
                 if (eventListener instanceof GameController) {
                     ((GameController) eventListener).selectAbility(abilityType);
                 }
-                hideLevelUpPopup();
+                rpgLevelUpManager.hideLevelUpPopup();
             }
             
             @Override
             public void selectAbility(int shortcut) {
                 // Get the ability type for this keyboard shortcut
-                String abilityType = getAbilityForShortcut(shortcut);
+                String abilityType = rpgLevelUpManager.getAbilityForShortcut(shortcut);
                 if (abilityType != null) {
                     selectAbility(abilityType);
                 }
@@ -277,7 +275,7 @@ public class GameViewController implements Initializable {
             
             @Override
             public boolean isLevelUpPopupVisible() {
-                return levelUpGroup != null && levelUpGroup.isVisible();
+                return rpgLevelUpManager.isLevelUpPopupVisible();
             }
         });
         
@@ -305,7 +303,7 @@ public class GameViewController implements Initializable {
             
             @Override
             public void centerGameOverPanel(Pane root) {
-                GameViewController.this.centerGameOverPanel(root);
+                layoutManager.centerGameOverPanel(root);
             }
             
             @Override
@@ -315,7 +313,7 @@ public class GameViewController implements Initializable {
         });
         
         gamePanel.setFocusTraversable(true);
-        resetSlowMode();
+        slowTimeManager.resetSlowMode();
         gamePanel.requestFocus();
         gamePanel.setOnKeyPressed(this::handleKeyPressed);
         gameOverPanel.setVisible(false);
@@ -337,132 +335,9 @@ public class GameViewController implements Initializable {
         reflection.setTopOffset(-12);
 
         // Center the entire game cluster without changing FXML structure
-        centerGameCluster();
+        layoutManager.centerGameCluster();
     }
 
-    private void centerGameCluster() {
-        Parent parent = gameBoard.getParent();
-        if (!(parent instanceof Pane)) return;
-        Pane root = (Pane) parent;
-
-        // Move the 3 nodes as a single unit (gameBoard, brickPanel, ghostPanel)
-        // groupNotification and pauseGroup are handled separately to center on entire screen
-        Group gameCluster = new Group(gameBoard, brickPanel, ghostPanel);
-        gameCluster.setManaged(false);
-        brickPanel.setManaged(false);
-        ghostPanel.setManaged(false);
-        groupNotification.setManaged(false);
-        if (pauseGroup != null) {
-            pauseGroup.setManaged(false);
-        }
-
-        // Remove nodes that need to be repositioned
-        root.getChildren().removeAll(gameBoard, brickPanel, ghostPanel, groupNotification);
-        if (pauseGroup != null && root.getChildren().contains(pauseGroup)) {
-            root.getChildren().remove(pauseGroup);
-        }
-        
-        root.getChildren().add(gameCluster);
-        root.getChildren().add(groupNotification); // Add game over panel separately
-        if (pauseGroup != null) {
-            root.getChildren().add(pauseGroup); // Add pause panel separately
-        }
-
-        Platform.runLater(() -> {
-            // 1) Freeze board size so it never changes with content
-            double w = Math.ceil(gameBoard.getBoundsInParent().getWidth());
-            double h = Math.ceil(gameBoard.getBoundsInParent().getHeight());
-            if (w <= 0 || h <= 0) { // fallback to pref if CSS not applied yet
-                w = gameBoard.prefWidth(-1);
-                h = gameBoard.prefHeight(-1);
-            }
-            gameBoard.setPrefSize(w, h);
-            gameBoard.setMinSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
-            gameBoard.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
-
-            final double fw = w;
-            final double fh = h;
-
-            // 2) Recenter only using stable board size
-            Runnable reposition = () -> {
-                double x = (root.getWidth() - fw) * 0.5;
-                double y = (root.getHeight() - fh) * 0.5 - 40; // nudge board slightly upward
-                gameCluster.relocate(x, y);
-                
-                // Center game over panel on entire screen (not relative to game board)
-                centerGameOverPanel(root);
-                
-                // Center pause panel on entire screen
-                centerPausePanel(root);
-                
-                // Position HOLD panel relative to game board's left edge
-                if (holdPanelVBox != null) {
-                    double holdPanelX = x - 120; // 120px to the left of game board
-                    double holdPanelY = y; // Align with top of game board
-                    holdPanelVBox.setLayoutX(holdPanelX);
-                    holdPanelVBox.setLayoutY(holdPanelY);
-                }
-                
-                // Position NEXT panel relative to game board's right edge
-                if (nextPanelVBox != null) {
-                    double nextPanelX = x + fw + 20; // 20px gap from game board right edge
-                    double nextPanelY = y; // Align with top of game board
-                    nextPanelVBox.setLayoutX(nextPanelX);
-                    nextPanelVBox.setLayoutY(nextPanelY);
-                    
-                    // Height will be set dynamically based on content in updateNextPiecesDisplay
-                }
-            };
-
-            // Recenter on window size changes; do NOT listen to gameCluster bounds
-            root.widthProperty().addListener((o, ov, nv) -> reposition.run());
-            root.heightProperty().addListener((o, ov, nv) -> reposition.run());
-
-            reposition.run();
-        });
-    }
-    
-    /**
-     * Center the game over panel on the entire screen
-     */
-    private void centerGameOverPanel(Pane root) {
-        if (groupNotification != null && root != null) {
-            // Wait for layout to calculate bounds
-            Platform.runLater(() -> {
-                double panelWidth = groupNotification.getBoundsInLocal().getWidth();
-                double panelHeight = groupNotification.getBoundsInLocal().getHeight();
-                if (panelWidth <= 0 || panelHeight <= 0) {
-                    // Use preferred size if bounds not calculated yet
-                    panelWidth = 500; // Approximate width
-                    panelHeight = 400; // Approximate height
-                }
-                double panelX = (root.getWidth() - panelWidth) * 0.5;
-                double panelY = (root.getHeight() - panelHeight) * 0.5;
-                groupNotification.relocate(panelX, panelY);
-            });
-        }
-    }
-    
-    /**
-     * Center the pause panel on the entire screen
-     */
-    private void centerPausePanel(Pane root) {
-        if (pauseGroup != null && root != null) {
-            // Wait for layout to calculate bounds
-            Platform.runLater(() -> {
-                double panelWidth = pauseGroup.getBoundsInLocal().getWidth();
-                double panelHeight = pauseGroup.getBoundsInLocal().getHeight();
-                if (panelWidth <= 0 || panelHeight <= 0) {
-                    // Use preferred size if bounds not calculated yet
-                    panelWidth = 500; // Approximate width
-                    panelHeight = 400; // Approximate height
-                }
-                double panelX = (root.getWidth() - panelWidth) * 0.5;
-                double panelY = (root.getHeight() - panelHeight) * 0.5;
-                pauseGroup.relocate(panelX, panelY);
-            });
-        }
-    }
 
     public void initGameView(int[][] boardMatrix, ViewData brick) {
         uiRenderer.initGameView(boardMatrix, brick);
@@ -471,7 +346,7 @@ public class GameViewController implements Initializable {
         long initialSpeed = animationManager.getInitialSpeedForMode(currentGameMode, 
                                                                    modeManager.getCurrentSpeedInterval(), 
                                                                    modeManager.getSurvivalSpeedInterval());
-        resetSlowMode();
+        slowTimeManager.resetSlowMode();
         updateDropSpeed(initialSpeed, true);
         
         // Start mode-specific timers
@@ -492,8 +367,8 @@ public class GameViewController implements Initializable {
     
     private void updateDropSpeed(long speedMs, boolean treatAsNormal) {
         if (treatAsNormal) {
-            normalDropSpeedMs = speedMs;
-            if (slowModeActive) {
+            slowTimeManager.setNormalDropSpeedMs(speedMs);
+            if (slowTimeManager.isSlowModeActive()) {
                 return;
             }
         }
@@ -508,74 +383,8 @@ public class GameViewController implements Initializable {
         updateDropSpeed(speedMs, true);
     }
     
-    private void resetSlowMode() {
-        if (slowModeTimeline != null) {
-            slowModeTimeline.stop();
-            slowModeTimeline = null;
-        }
-        slowModeActive = false;
-        slowModeSecondsRemaining = 0;
-        updateSlowTimerLabel();
-    }
-    
-    private void updateSlowTimerLabel() {
-        Label[] timerLabels = new Label[]{abilitySlot1Timer, abilitySlot2Timer, abilitySlot3Timer, abilitySlot4Timer};
-        for (Label lbl : timerLabels) {
-            if (lbl != null) {
-                lbl.setText("");
-            }
-        }
-        if (slowAbilitySlotIndex < 0 || slowAbilitySlotIndex >= timerLabels.length) {
-            return;
-        }
-        Label target = timerLabels[slowAbilitySlotIndex];
-        if (target == null) {
-            return;
-        }
-        if (slowModeActive && slowModeSecondsRemaining > 0) {
-            target.setText(slowModeSecondsRemaining + "s");
-        } else {
-            target.setText("Inactive");
-        }
-    }
-    
     public void activateSlowTime(int durationSeconds) {
-        Platform.runLater(() -> startSlowModeEffect(durationSeconds));
-    }
-    
-    private void startSlowModeEffect(int durationSeconds) {
-        if (durationSeconds <= 0) {
-            return;
-        }
-        if (!slowModeActive) {
-            slowModeActive = true;
-            long slowSpeed = Math.min(normalDropSpeedMs * 2, normalDropSpeedMs + 400);
-            updateDropSpeed(slowSpeed, false);
-        } else if (slowModeTimeline != null) {
-            slowModeTimeline.stop();
-        }
-        slowModeSecondsRemaining = durationSeconds;
-        updateSlowTimerLabel();
-        slowModeTimeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
-            slowModeSecondsRemaining--;
-            updateSlowTimerLabel();
-            if (slowModeSecondsRemaining <= 0) {
-                endSlowModeEffect();
-            }
-        }));
-        slowModeTimeline.setCycleCount(durationSeconds);
-        slowModeTimeline.play();
-    }
-    
-    private void endSlowModeEffect() {
-        if (slowModeTimeline != null) {
-            slowModeTimeline.stop();
-            slowModeTimeline = null;
-        }
-        slowModeActive = false;
-        slowModeSecondsRemaining = 0;
-        updateSlowTimerLabel();
-        updateDropSpeed(normalDropSpeedMs, false);
+        slowTimeManager.activateSlowTime(durationSeconds);
     }
 
     private void moveDown(MoveEvent event) {
@@ -645,6 +454,7 @@ public class GameViewController implements Initializable {
     public void setEventListener(InputEventListener eventListener) {
         this.eventListener = eventListener;
         inputHandler.setEventListener(eventListener);
+        rpgLevelUpManager.setEventListener(eventListener);
     }
 
     public void bindScore(IntegerProperty integerProperty) {
@@ -730,118 +540,21 @@ public class GameViewController implements Initializable {
         if (abilitySlot4Label != null) {
             abilitySlot4Label.setText(slot4Text);
         }
-        this.slowAbilitySlotIndex = slowAbilitySlotIndex;
-        updateSlowTimerLabel();
+        slowTimeManager.setSlowAbilitySlotIndex(slowAbilitySlotIndex);
     }
     
     /**
      * Show the level-up popup for ability selection with 3 random abilities
      */
     public void showLevelUpPopup() {
-        System.out.println("showLevelUpPopup() called");
-        if (levelUpGroup != null) {
-            // Randomly select 3 abilities from the 4 available
-            String[] allAbilities = {"CLEAR_BOTTOM_3", "SLOW_TIME", "COLOR_BOMB", "COLOR_SYNC"};
-            List<String> abilityList = new ArrayList<>(Arrays.asList(allAbilities));
-            Collections.shuffle(abilityList);
-            
-            // Take first 3 abilities
-            currentLevelUpAbilities[0] = abilityList.get(0);
-            currentLevelUpAbilities[1] = abilityList.get(1);
-            currentLevelUpAbilities[2] = abilityList.get(2);
-            
-            System.out.println("Random abilities selected: " + 
-                currentLevelUpAbilities[0] + ", " + 
-                currentLevelUpAbilities[1] + ", " + 
-                currentLevelUpAbilities[2]);
-            
-            // Update button visibility and labels
-            updateAbilityButtons();
-            
-            levelUpGroup.setVisible(true);
-            levelUpGroup.setManaged(true);
-            // Pause the game when level-up popup appears
-            gameStateManager.setPaused(true);
-            System.out.println("Level-up popup should now be visible!");
-        } else {
-            System.out.println("ERROR: levelUpGroup is null!");
-        }
-    }
-    
-    /**
-     * Update ability buttons to show only the 3 randomly selected abilities
-     * Buttons are always labeled [1], [2], [3] in sequential order from top to bottom
-     * The abilities themselves are randomly selected, but displayed in sequential order
-     */
-    private void updateAbilityButtons() {
-        // Hide all buttons first
-        if (clearBottomBtn != null) clearBottomBtn.setVisible(false);
-        if (slowTimeBtn != null) slowTimeBtn.setVisible(false);
-        if (colorBombBtn != null) colorBombBtn.setVisible(false);
-        if (colorSyncBtn != null) colorSyncBtn.setVisible(false);
-        
-        // Buttons in display order (top to bottom) - use first 3 buttons from FXML
-        Button[] displayButtons = {clearBottomBtn, slowTimeBtn, colorBombBtn};
-        
-        // Assign the 3 randomly selected abilities to buttons in sequential order [1], [2], [3]
-        for (int i = 0; i < 3; i++) {
-            String ability = currentLevelUpAbilities[i];
-            Button button = displayButtons[i]; // Use buttons in FXML order
-            int buttonNumber = i + 1; // Always sequential: 1, 2, 3
-            
-            // Set the button text based on ability type
-            String buttonText = "";
-            switch (ability) {
-                case "CLEAR_BOTTOM_3":
-                    buttonText = "[" + buttonNumber + "] Clear Bottom 3 Rows";
-                    break;
-                case "SLOW_TIME":
-                    buttonText = "[" + buttonNumber + "] Slow Time (10s)";
-                    break;
-                case "COLOR_BOMB":
-                    buttonText = "[" + buttonNumber + "] Color Bomb (clear matching color)";
-                    break;
-                case "COLOR_SYNC":
-                    buttonText = "[" + buttonNumber + "] Color Sync (combo setup)";
-                    break;
-            }
-            
-            if (button != null) {
-                button.setVisible(true);
-                button.setText(buttonText);
-                
-                // Update the button's onAction to call the correct ability
-                // We need to update the action handler dynamically
-                button.setOnAction(e -> {
-                    if (eventListener instanceof GameController) {
-                        ((GameController) eventListener).selectAbility(ability);
-                    }
-                    hideLevelUpPopup();
-                });
-            }
-        }
-    }
-    
-    /**
-     * Get the ability type for a given keyboard shortcut (1, 2, or 3)
-     */
-    public String getAbilityForShortcut(int shortcut) {
-        if (shortcut >= 1 && shortcut <= 3) {
-            return currentLevelUpAbilities[shortcut - 1];
-        }
-        return null;
+        rpgLevelUpManager.showLevelUpPopup();
     }
     
     /**
      * Hide the level-up popup and resume game
      */
     public void hideLevelUpPopup() {
-        if (levelUpGroup != null) {
-            levelUpGroup.setVisible(false);
-            levelUpGroup.setManaged(false);
-            // Resume the game
-            gameStateManager.setPaused(false);
-        }
+        rpgLevelUpManager.hideLevelUpPopup();
     }
     
     /**
@@ -849,11 +562,7 @@ public class GameViewController implements Initializable {
      */
     @FXML
     private void selectClearBottom() {
-        // Notify GameController of ability selection
-        if (eventListener instanceof GameController) {
-            ((GameController) eventListener).selectAbility("CLEAR_BOTTOM_3");
-        }
-        hideLevelUpPopup();
+        rpgLevelUpManager.selectClearBottom();
     }
     
     /**
@@ -861,10 +570,7 @@ public class GameViewController implements Initializable {
      */
     @FXML
     private void selectSlowTime() {
-        if (eventListener instanceof GameController) {
-            ((GameController) eventListener).selectAbility("SLOW_TIME");
-        }
-        hideLevelUpPopup();
+        rpgLevelUpManager.selectSlowTime();
     }
     
     /**
@@ -872,10 +578,7 @@ public class GameViewController implements Initializable {
      */
     @FXML
     private void selectColorBomb() {
-        if (eventListener instanceof GameController) {
-            ((GameController) eventListener).selectAbility("COLOR_BOMB");
-        }
-        hideLevelUpPopup();
+        rpgLevelUpManager.selectColorBomb();
     }
     
     /**
@@ -883,10 +586,7 @@ public class GameViewController implements Initializable {
      */
     @FXML
     private void selectColorSync() {
-        if (eventListener instanceof GameController) {
-            ((GameController) eventListener).selectAbility("COLOR_SYNC");
-        }
-        hideLevelUpPopup();
+        rpgLevelUpManager.selectColorSync();
     }
     
     /**
@@ -927,7 +627,7 @@ public class GameViewController implements Initializable {
         // Center the game over panel on screen
         Parent parent = gameBoard.getParent();
         if (parent instanceof Pane) {
-            centerGameOverPanel((Pane) parent);
+            layoutManager.centerGameOverPanel((Pane) parent);
         }
         
         // Play completion sound
@@ -957,7 +657,7 @@ public class GameViewController implements Initializable {
         // Center the game over panel on screen
         Parent parent = gameBoard.getParent();
         if (parent instanceof Pane) {
-            centerGameOverPanel((Pane) parent);
+            layoutManager.centerGameOverPanel((Pane) parent);
         }
         
         // Ensure focus is on gamePanel so keyboard controls work for game over
@@ -984,7 +684,7 @@ public class GameViewController implements Initializable {
         long initialSpeed = animationManager.getInitialSpeedForMode(currentGameMode, 
                                                                    modeManager.getCurrentSpeedInterval(), 
                                                                    modeManager.getSurvivalSpeedInterval());
-        resetSlowMode();
+        slowTimeManager.resetSlowMode();
         updateDropSpeed(initialSpeed, true);
         
         gameStateManager.reset();
@@ -1047,7 +747,7 @@ public class GameViewController implements Initializable {
             // Center the pause panel
             Parent parent = gameBoard.getParent();
             if (parent instanceof Pane) {
-                centerPausePanel((Pane) parent);
+                layoutManager.centerPausePanel((Pane) parent);
             }
         }
         
@@ -1120,78 +820,24 @@ public class GameViewController implements Initializable {
      */
     @FXML
     public void backToMenu(ActionEvent actionEvent) {
-        try {
-            // Stop the game timeline
-            animationManager.stopTimeline();
+        // Stop the game timeline
+        animationManager.stopTimeline();
 
-            // Load the main menu
-            URL location = getClass().getClassLoader().getResource("mainMenu.fxml");
-            FXMLLoader fxmlLoader = new FXMLLoader(location);
-            Parent menuRoot = fxmlLoader.load();
-            
-            // Get the menu controller
-            MenuController menuController = fxmlLoader.getController();
-            
-            // Get current stage and switch back to menu
-            // Can get stage from scene (works for both button click and keyboard)
-            Stage stage = null;
-            if (backToMenuBtn != null && backToMenuBtn.getScene() != null) {
-                stage = (Stage) backToMenuBtn.getScene().getWindow();
-            } else if (gamePanel != null && gamePanel.getScene() != null) {
-                stage = (Stage) gamePanel.getScene().getWindow();
-            }
-            
-            if (stage == null) {
-                System.out.println("✗ Cannot get stage - cannot return to menu");
-                return;
-            }
-            Scene menuScene = new Scene(menuRoot, 1200, 800); // Larger size for full screen
-            stage.setScene(menuScene);
-            stage.setTitle("Tetris - Enhanced Edition");
-            
-            // Maintain full screen mode
-            stage.setFullScreen(true);
-            stage.setResizable(false); // Prevent window manipulation
-            stage.setFullScreenExitKeyCombination(null);
-            stage.setFullScreenExitHint("");
-            
-            // Add fullscreen enforcement listener
-            enforceFullscreenMode(stage);
-            
-            // Stop background video
-            if (videoManager != null) {
-                videoManager.dispose();
-            }
-            
-            // Stop and dispose audio resources
-            if (audioManager != null) {
-                audioManager.dispose();
-            }
-            
-            // Set the primary stage reference for the menu controller
-            menuController.setPrimaryStage(stage);
-            
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println("Error returning to menu: " + e.getMessage());
+        // Get current stage and switch back to menu
+        // Can get stage from scene (works for both button click and keyboard)
+        Stage stage = null;
+        if (backToMenuBtn != null && backToMenuBtn.getScene() != null) {
+            stage = (Stage) backToMenuBtn.getScene().getWindow();
+        } else if (gamePanel != null && gamePanel.getScene() != null) {
+            stage = (Stage) gamePanel.getScene().getWindow();
         }
-    }
-    
-    /**
-     * Enforce fullscreen mode with listener to prevent exits
-     */
-    private void enforceFullscreenMode(Stage stage) {
-        if (stage != null) {
-            // Add a listener to prevent any attempts to exit fullscreen
-            stage.fullScreenProperty().addListener((obs, wasFullScreen, isNowFullScreen) -> {
-                if (!isNowFullScreen) {
-                    // If someone tries to exit fullscreen, immediately re-enable it
-                    stage.setFullScreen(true);
-                    stage.setFullScreenExitKeyCombination(null);
-                    stage.setFullScreenExitHint("");
-                }
-            });
+        
+        if (stage == null) {
+            System.out.println("✗ Cannot get stage - cannot return to menu");
+            return;
         }
+        
+        menuNavigator.backToMenu(stage);
     }
     
     /**

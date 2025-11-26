@@ -9,7 +9,11 @@ import java.net.URL;
 
 /**
  * Manages all audio for the game including sound effects and background music.
+ * Handles loading, playing, and disposing of audio resources.
  * This class simplifies audio management by centralizing all audio operations.
+ * 
+ * @author Phung Yu Jie
+ * @version 1.0
  */
 public class AudioManager {
     
@@ -28,7 +32,8 @@ public class AudioManager {
     private SettingsManager settings;
     
     /**
-     * Constructor - initializes all audio
+     * Constructs an AudioManager and initializes all audio resources.
+     * Loads sound effects and background music from resource files.
      */
     public AudioManager() {
         settings = SettingsManager.getInstance();
@@ -113,7 +118,11 @@ public class AudioManager {
     }
     
     /**
-     * Helper method to load a sound effect, trying multiple possible file names
+     * Helper method to load a sound effect, trying multiple possible file names.
+     * Attempts to load from resources first, then from direct file paths.
+     * 
+     * @param fileNames Array of possible file names to try
+     * @param soundType The type of sound being loaded (for assignment to correct player)
      */
     private void loadSoundEffect(String[] fileNames, String soundType) {
         Media soundMedia = null;
@@ -289,7 +298,9 @@ public class AudioManager {
         }
     }
     
-    // Sound effect playback methods
+    /**
+     * Plays the block land sound effect if sound effects are enabled.
+     */
     public void playBlockLandSound() {
         if (blockLandSound != null && settings.isSfxEnabled()) {
             blockLandSound.seek(Duration.ZERO);
@@ -297,6 +308,9 @@ public class AudioManager {
         }
     }
     
+    /**
+     * Plays the hard drop sound effect if sound effects are enabled.
+     */
     public void playHardDropSound() {
         if (hardDropSound != null && settings.isSfxEnabled()) {
             hardDropSound.seek(Duration.ZERO);
@@ -304,6 +318,9 @@ public class AudioManager {
         }
     }
     
+    /**
+     * Plays the line clear sound effect if sound effects are enabled.
+     */
     public void playLineClearSound() {
         if (lineClearSound != null && settings.isSfxEnabled()) {
             lineClearSound.seek(Duration.ZERO);
@@ -311,6 +328,10 @@ public class AudioManager {
         }
     }
     
+    /**
+     * Plays the game over sound effect if sound effects are enabled.
+     * Adjusts volume to 85% and restores background music volume after playback.
+     */
     public void playGameOverSound() {
         if (gameOverSound != null && settings.isSfxEnabled()) {
             gameOverSound.seek(Duration.ZERO);
@@ -327,6 +348,9 @@ public class AudioManager {
         }
     }
     
+    /**
+     * Plays the combo sound effect (used for Color Bomb ability) if sound effects are enabled.
+     */
     public void playComboSound() {
         if (comboSound != null && settings.isSfxEnabled()) {
             comboSound.seek(Duration.ZERO);
@@ -334,6 +358,9 @@ public class AudioManager {
         }
     }
     
+    /**
+     * Plays the color sync sound effect (used for Color Sync ability) if sound effects are enabled.
+     */
     public void playColorSyncSound() {
         if (colorSyncSound != null && settings.isSfxEnabled()) {
             colorSyncSound.seek(Duration.ZERO);
@@ -341,6 +368,9 @@ public class AudioManager {
         }
     }
     
+    /**
+     * Plays the clear rows sound effect (used for Clear Bottom 3 Rows ability) if sound effects are enabled.
+     */
     public void playClearRowsSound() {
         if (clearRowsSound != null && settings.isSfxEnabled()) {
             clearRowsSound.seek(Duration.ZERO);
@@ -348,19 +378,29 @@ public class AudioManager {
         }
     }
     
-    // Background music control methods
+    /**
+     * Sets the volume of the background music.
+     * 
+     * @param volume The volume level (0.0 to 1.0)
+     */
     public void setBackgroundMusicVolume(double volume) {
         if (gameplayBackgroundMusic != null) {
             gameplayBackgroundMusic.setVolume(volume);
         }
     }
     
+    /**
+     * Stops the background music playback.
+     */
     public void stopBackgroundMusic() {
         if (gameplayBackgroundMusic != null) {
             gameplayBackgroundMusic.stop();
         }
     }
     
+    /**
+     * Starts or resumes the background music playback.
+     */
     public void playBackgroundMusic() {
         if (gameplayBackgroundMusic != null) {
             gameplayBackgroundMusic.play();
@@ -368,7 +408,8 @@ public class AudioManager {
     }
     
     /**
-     * Clean up all audio resources
+     * Cleans up all audio resources by stopping and disposing all media players.
+     * Should be called when the application is closing.
      */
     public void dispose() {
         if (blockLandSound != null) {
